@@ -5,11 +5,14 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import About from './pages/About';
 import Account from './pages/Account';
-import Category from './pages/Category';
 import Cart from './pages/Cart';
+import Category from './pages/Category';
+import ChangePassword from './pages/ChangePassword';
 import Checkout from './pages/Checkout';
+import ConfirmEmail from './pages/ConfirmEmail';
 import Contact from './pages/Contact';
 import Faq from './pages/Faq';
+import ForgotPassword from './pages/ForgotPassword';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import OrderConfirmation from './pages/OrderConfirmation';
@@ -18,13 +21,12 @@ import Privacy from './pages/Privacy';
 import ProductDetails from './pages/ProductDetails';
 import ProductLists from './pages/ProductLists';
 // import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import ReturnPolicy from './pages/ReturnPolicy';
 import SearchResults from './pages/SearchResults';
 import ShippingInfo from './pages/ShippingInfo';
 import Support from './pages/Support';
 import Tos from './pages/Tos';
-
-
 
 function App() {
   return (
@@ -37,9 +39,12 @@ function App() {
           <Route path="/account" element={<Account />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/category" element={<Category />} />
+          <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/confirm-email" element={<ConfirmEmail />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/faq" element={<Faq />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/order-confirmation" element={<OrderConfirmation />} />
@@ -49,6 +54,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/product-lists" element={<ProductLists />} />
           {/* <Route path="/register" element={<Register />} /> */}
+          <Route path="/reset-password/:token?" element={<ResetPassword />} />
           <Route path="/return-policy" element={<ReturnPolicy />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/shipping-info" element={<ShippingInfo />} />

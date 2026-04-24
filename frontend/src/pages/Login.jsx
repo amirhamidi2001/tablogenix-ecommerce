@@ -286,7 +286,7 @@ const Login = () => {
                           required
                         />
                         <span className="text-sm text-gray-600">
-                          I agree to the <Link to="/terms" className="text-teal-600 hover:underline">Terms of Service</Link> and{' '}
+                          I agree to the <Link to="/tos" className="text-teal-600 hover:underline">Terms of Service</Link> and{' '}
                           <Link to="/privacy" className="text-teal-600 hover:underline">Privacy Policy</Link>
                         </span>
                       </label>

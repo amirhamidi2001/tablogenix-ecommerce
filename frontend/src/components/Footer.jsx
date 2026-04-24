@@ -90,7 +90,7 @@ const Footer = () => {
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left text-sm">
             <p>© <span className="font-semibold">TabloGenix</span>. All Rights Reserved.</p>
-            <p className="text-xs text-emerald-500 mt-1">Designed by BootstrapMade</p>
+            <p className="text-xs text-emerald-500 mt-1">Developed by Amir Hamidi</p>
           </div>
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex gap-3 text-2xl">
