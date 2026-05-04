@@ -1,10 +1,17 @@
+FROM node:20-alpine AS development
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
-RUN cp -r assets /app/dist/
 
 FROM nginx:stable-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
