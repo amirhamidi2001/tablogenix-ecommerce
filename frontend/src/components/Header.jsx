@@ -87,7 +87,7 @@ const Header = () => {
             <button className="text-emerald-700 text-xl hover:text-teal-700">
               <i className="bi bi-person"></i>
             </button>
-            <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-lg hidden group-hover:block z-10 border border-emerald-100">
+              <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-lg hidden group-hover:block z-10 border border-emerald-100 before:content-[''] before:absolute before:-top-3 before:left-0 before:w-full before:h-3">
               <div className="p-4 border-b">
                 <h6 className="font-semibold">Welcome to TabloGenix</h6>
                 <p className="text-xs text-emerald-500">Access account & manage orders</p>
@@ -100,7 +100,7 @@ const Header = () => {
               </div>
               <div className="p-4 border-t bg-emerald-50 flex gap-2">
                 <Link to="/login" className="flex-1 text-center bg-teal-700 text-white py-1 rounded text-sm">Sign In</Link>
-                <Link to="/register" className="flex-1 text-center border border-teal-700 text-teal-700 py-1 rounded text-sm">Register</Link>
+                <Link to="/login?mode=register" className="flex-1 text-center border border-teal-700 text-teal-700 py-1 rounded text-sm">Register</Link>
               </div>
             </div>
           </div>

@@ -1,10 +1,21 @@
 // src/pages/Login.jsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get('mode');
+  
   const [activeForm, setActiveForm] = useState('login'); // 'login' or 'register'
+
+  useEffect(() => {
+    if (mode === 'register') {
+      setActiveForm('register');
+    } else {
+      setActiveForm('login');
+    }
+  }, [mode]);
 
   // State for login form
   const [loginData, setLoginData] = useState({
