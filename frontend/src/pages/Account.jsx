@@ -1,6 +1,6 @@
 // src/pages/Account.jsx
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import AccountSidebar from '../components/AccountSidebar';
 import OrdersTab from '../components/OrdersTab';
 import WishlistTab from '../components/WishlistTab';
@@ -10,7 +10,17 @@ import AddressesTab from '../components/AddressesTab';
 import SettingsTab from '../components/SettingsTab';
 
 const Account = () => {
-  const [activeTab, setActiveTab] = useState('orders');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab') || 'orders';
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
+
+  useEffect(() => {
+    setSearchParams({ tab: activeTab });
+  }, [activeTab, setSearchParams]);
+
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -26,7 +36,6 @@ const Account = () => {
 
   return (
     <>
-      {/* Page Title (همان قبلی) */}
       <div className="bg-gray-50 py-12 border-b">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">Account</h1>

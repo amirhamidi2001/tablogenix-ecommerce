@@ -54,7 +54,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/product-lists" element={<ProductLists />} />
           {/* <Route path="/register" element={<Register />} /> */}
-          <Route path="/reset-password/:token?" element={<ResetPassword />} />
+          <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
           <Route path="/return-policy" element={<ReturnPolicy />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/shipping-info" element={<ShippingInfo />} />

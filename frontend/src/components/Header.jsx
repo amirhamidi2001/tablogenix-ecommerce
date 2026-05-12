@@ -1,10 +1,74 @@
-// src/components/Header.jsx
-import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import api, { getAccessToken, clearTokens, isAuthenticated as isTokenValid } from '../services/api';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Fetch user profile if authenticated
+  const fetchUserProfile = async () => {
+    const token = getAccessToken();
+    if (!token) {
+      setIsAuthenticated(false);
+      setUserName('');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.get('/accounts/profile/');
+      const profile = response.data;
+      setIsAuthenticated(true);
+      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+      setUserName(fullName || profile.email.split('@')[0] || 'User');
+    } catch (error) {
+      // Token invalid or expired
+      if (error.response?.status === 401) {
+        clearTokens();
+        setIsAuthenticated(false);
+        setUserName('');
+      } else {
+        console.error('Profile fetch error:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    clearTokens();
+    setIsAuthenticated(false);
+    setUserName('');
+    navigate('/');
+  };
+
+  // Listen for auth changes (login/register in other tabs/windows)
+  useEffect(() => {
+    fetchUserProfile();
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'access_token') {
+        fetchUserProfile();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    // Custom event for same-tab updates (can be dispatched from login/register components)
+    const handleAuthChange = () => fetchUserProfile();
+    window.addEventListener('auth-change', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
+  }, [location.pathname]); // re-fetch on route change to keep header in sync
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md">
@@ -82,31 +146,55 @@ const Header = () => {
             <i className="bi bi-search"></i>
           </button>
 
-          {/* Account Dropdown */}
+          {/* Account Dropdown - CONDITIONAL CONTENT BASED ON AUTH */}
           <div className="dropdown relative group">
             <button className="text-emerald-700 text-xl hover:text-teal-700">
               <i className="bi bi-person"></i>
             </button>
-              <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-lg hidden group-hover:block z-10 border border-emerald-100 before:content-[''] before:absolute before:-top-3 before:left-0 before:w-full before:h-3">
-              <div className="p-4 border-b">
-                <h6 className="font-semibold">Welcome to TabloGenix</h6>
-                <p className="text-xs text-emerald-500">Access account & manage orders</p>
-              </div>
-              <div className="py-2">
-                <Link to="/account" className="block px-4 py-2 text-sm hover:bg-emerald-50">My Profile</Link>
-                <Link to="/account" className="block px-4 py-2 text-sm hover:bg-emerald-50">My Orders</Link>
-                <Link to="/account" className="block px-4 py-2 text-sm hover:bg-emerald-50">My Wishlist</Link>
-                <Link to="/account" className="block px-4 py-2 text-sm hover:bg-emerald-50">Settings</Link>
-              </div>
-              <div className="p-4 border-t bg-emerald-50 flex gap-2">
-                <Link to="/login" className="flex-1 text-center bg-teal-700 text-white py-1 rounded text-sm">Sign In</Link>
-                <Link to="/login?mode=register" className="flex-1 text-center border border-teal-700 text-teal-700 py-1 rounded text-sm">Register</Link>
-              </div>
+            <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-lg hidden group-hover:block z-10 border border-emerald-100 before:content-[''] before:absolute before:-top-3 before:left-0 before:w-full before:h-3">
+              {!loading && (
+                <>
+                  {isAuthenticated ? (
+                    // ─── AUTHENTICATED DROPDOWN ─────────────────────────────
+                    <>
+                      <div className="p-4 border-b">
+                        <h6 className="font-semibold">Welcome back, {userName}!</h6>
+                        <p className="text-xs text-emerald-500">Manage your account & orders</p>
+                      </div>
+                      <div className="py-2">
+                        <Link to="/account?tab=orders" className="block px-4 py-2 text-sm hover:bg-emerald-50">Orders</Link>
+                        <Link to="/account?tab=wishlist" className="block px-4 py-2 text-sm hover:bg-emerald-50">Wishlist</Link>
+                        <Link to="/account?tab=addresses" className="block px-4 py-2 text-sm hover:bg-emerald-50">Addresses</Link>
+                        <Link to="/account?tab=settings" className="block px-4 py-2 text-sm hover:bg-emerald-50">Settings</Link>
+                        <button onClick={handleLogout} className="w-full text-center block px-4 py-2 text-sm hover:bg-red-50 text-red-600">
+                          Logout
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    // ─── UNAUTHENTICATED DROPDOWN (LOGIN + REGISTER BUTTONS) ──
+                    <>
+                      <div className="p-4 border-b">
+                        <h6 className="font-semibold">Welcome to TabloGenix</h6>
+                        <p className="text-xs text-emerald-500">Access account & manage orders</p>
+                      </div>
+                      <div className="py-2">
+                        <Link to="/login" className="block px-4 py-2 text-sm hover:bg-emerald-50">Sign In</Link>
+                        <Link to="/login?mode=register" className="block px-4 py-2 text-sm hover:bg-emerald-50">Register</Link>
+                      </div>
+                      <div className="p-4 border-t bg-emerald-50 flex gap-2">
+                        <Link to="/login" className="flex-1 text-center bg-teal-700 text-white py-1 rounded text-sm">Sign In</Link>
+                        <Link to="/login?mode=register" className="flex-1 text-center border border-teal-700 text-teal-700 py-1 rounded text-sm">Register</Link>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
           {/* Wishlist */}
-          <Link to="/wishlist" className="relative text-emerald-700 text-xl hover:text-teal-700">
+          <Link to="/account?tab=wishlist" className="relative text-emerald-700 text-xl hover:text-teal-700">
             <i className="bi bi-heart"></i>
             <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
           </Link>
