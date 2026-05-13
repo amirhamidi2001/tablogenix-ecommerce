@@ -219,7 +219,6 @@ const Header = () => {
             <li><NavLink to="/" className={({ isActive }) => `block py-3 ${isActive ? 'text-teal-400' : 'hover:text-teal-400'}`}>Home</NavLink></li>
             <li><NavLink to="/about" className="block py-3 hover:text-teal-400">About</NavLink></li>
             <li><NavLink to="/category" className="block py-3 hover:text-teal-400">Category</NavLink></li>
-            <li><NavLink to="/product-details" className="block py-3 hover:text-teal-400">Product Details</NavLink></li>
             <li><NavLink to="/cart" className="block py-3 hover:text-teal-400">Cart</NavLink></li>
             <li><NavLink to="/checkout" className="block py-3 hover:text-teal-400">Checkout</NavLink></li>
             <li className="relative group">
