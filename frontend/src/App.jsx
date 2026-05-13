@@ -51,7 +51,7 @@ function App() {
           <Route path="/payment-methods" element={<PaymentMethods />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/product-details" element={<ProductDetails />} />
-          <Route path="/product/:id" element={<ProductDetails />} />
+          <Route path="/product/:slug" element={<ProductDetails />} />
           <Route path="/product-lists" element={<ProductLists />} />
           {/* <Route path="/register" element={<Register />} /> */}
           <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />

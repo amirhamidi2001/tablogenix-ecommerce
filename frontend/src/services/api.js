@@ -1,3 +1,4 @@
+// src/services/api.js
 import axios from 'axios';
 
 // ─── Base instance ─────────────────────────────────────────────────────────
@@ -53,11 +54,10 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    // Skip refresh for non-401s, already-retried requests, and auth endpoints.
     if (
       error.response?.status !== 401 ||
       original._retried              ||
-      isAuthEndpoint(original)          // ← THE KEY FIX
+      isAuthEndpoint(original)
     ) {
       return Promise.reject(error);
     }
@@ -103,12 +103,65 @@ export const parseErrors = (error) => {
   if (!data || typeof data !== 'object') {
     return { non_field_errors: 'Network error. Please try again.' };
   }
-
   const flat = {};
   Object.entries(data).forEach(([key, value]) => {
     flat[key] = Array.isArray(value) ? value[0] : String(value);
   });
   return flat;
 };
+
+// ─── Shop API calls ────────────────────────────────────────────────────────
+
+/**
+ * Fetch paginated, filtered product list.
+ *
+ * @param {Object} params
+ * @param {number}  [params.page=1]
+ * @param {number}  [params.page_size=12]
+ * @param {string}  [params.search]
+ * @param {string}  [params.category]       slug or id
+ * @param {string}  [params.brand]          comma-separated slugs
+ * @param {string}  [params.color]          comma-separated ids or names
+ * @param {number}  [params.min_price]
+ * @param {number}  [params.max_price]
+ * @param {boolean} [params.is_new]
+ * @param {boolean} [params.is_sale]
+ * @param {string}  [params.ordering]       e.g. "price", "-price", "-rating"
+ */
+export const getProducts = (params = {}) =>
+  api.get('/products/', { params });
+
+/**
+ * Fetch a single product by slug.
+ * @param {string} slug
+ */
+export const getProductDetails = (slug) =>
+  api.get(`/products/${slug}/`);
+
+/**
+ * Fetch related products for a given product slug (same category).
+ * @param {string} slug
+ */
+export const getRelatedProducts = (slug) =>
+  api.get(`/products/${slug}/related/`);
+
+/**
+ * Fetch the category tree (top-level with nested children).
+ */
+export const getCategories = () =>
+  api.get('/categories/');
+
+/**
+ * Fetch all brands (optionally search by name).
+ * @param {string} [search]
+ */
+export const getBrands = (search = '') =>
+  api.get('/brands/', { params: search ? { search } : {} });
+
+/**
+ * Fetch all available colors.
+ */
+export const getColors = () =>
+  api.get('/colors/');
 
 export default api;

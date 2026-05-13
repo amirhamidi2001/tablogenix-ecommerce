@@ -31,6 +31,7 @@ urlpatterns = [
     # Apps
     path("api/auth/", include("accounts.urls")),
     path("api/contact/", include("contact.urls")),
+    path("api/", include("shop.urls")),
     # OpenAPI / Docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
