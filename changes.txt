@@ -1,0 +1,452 @@
+diff --git a/backend/core/settings.py b/backend/core/settings.py
+index ad98d51..5ce876e 100644
+--- a/backend/core/settings.py
++++ b/backend/core/settings.py
+@@ -38,12 +38,15 @@ INSTALLED_APPS = [
+     "django.contrib.sessions",
+     "django.contrib.messages",
+     "django.contrib.staticfiles",
++    # Third-party
+     "corsheaders",
+     "rest_framework",
+     "rest_framework_simplejwt",
+     "rest_framework_simplejwt.token_blacklist",
+     "drf_spectacular",
++    # Local
+     "accounts.apps.AccountsConfig",
++    "contact.apps.ContactConfig",
+ ]
+ 
+ MIDDLEWARE = [
+@@ -173,16 +176,16 @@ SIMPLE_JWT = {
+ }
+ 
+ # EMAIL SETTINGS
+-# if DEBUG:
+-#     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+-# else:
+-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+-EMAIL_HOST = "smtp.gmail.com"
+-EMAIL_PORT = 587
+-EMAIL_USE_TLS = True
+-EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+-DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
++if DEBUG:
++    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
++else:
++    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
++    EMAIL_HOST = "smtp.gmail.com"
++    EMAIL_PORT = 587
++    EMAIL_USE_TLS = True
++    EMAIL_HOST_USER = config("EMAIL_HOST_USER")
++    EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
++    DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
+ 
+ # Frontend URL (used when building password-reset links)
+ FRONTEND_URL = "http://localhost:3000"
+diff --git a/backend/core/urls.py b/backend/core/urls.py
+index 7569867..ea75cfe 100644
+--- a/backend/core/urls.py
++++ b/backend/core/urls.py
+@@ -16,17 +16,34 @@ Including another URLconf
+ """
+ 
+ from django.contrib import admin
+-from django.urls import include, path
+-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
++from django.urls import path, include
++from django.conf import settings
++from django.conf.urls.static import static
++from drf_spectacular.views import (
++    SpectacularAPIView,
++    SpectacularSwaggerView,
++    SpectacularRedocView,
++)
+ 
+ urlpatterns = [
++    # Admin
+     path("admin/", admin.site.urls),
+-    path("api-auth/", include("rest_framework.urls")),
+-    path("api/", include("accounts.urls")),
++    # Apps
++    path("api/auth/", include("accounts.urls")),
++    path("api/contact/", include("contact.urls")),
++    # OpenAPI / Docs
+     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+     path(
+-        "api/docs/",
++        "api/schema/swagger/",
+         SpectacularSwaggerView.as_view(url_name="schema"),
+         name="swagger-ui",
+     ),
++    path(
++        "api/schema/redoc/",
++        SpectacularRedocView.as_view(url_name="schema"),
++        name="redoc",
++    ),
+ ]
++
++if settings.DEBUG:
++    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+diff --git a/frontend/src/pages/Contact.jsx b/frontend/src/pages/Contact.jsx
+index daa8c04..739ff01 100644
+--- a/frontend/src/pages/Contact.jsx
++++ b/frontend/src/pages/Contact.jsx
+@@ -1,57 +1,76 @@
+ // src/pages/Contact.jsx
+-import { useState } from 'react';
++import { useState, useCallback } from 'react';
+ import { Link } from 'react-router-dom';
++import api, { parseErrors } from '../services/api';
++
++// ─── constants ────────────────────────────────────────────────────────────────
++
++const INITIAL_FORM = { name: '', email: '', subject: '', message: '' };
++
++// ─── sub-components ───────────────────────────────────────────────────────────
++
++const FieldError = ({ message }) =>
++  message ? (
++    <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
++      <i className="bi bi-exclamation-circle text-xs" />
++      {message}
++    </p>
++  ) : null;
++
++const inputClass = (hasError) =>
++  [
++    'w-full border rounded-lg pl-10 pr-4 py-3 transition',
++    'focus:outline-none focus:ring-1',
++    hasError
++      ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
++      : 'border-gray-300 focus:border-teal-500 focus:ring-teal-500',
++  ].join(' ');
++
++// ─── main component ───────────────────────────────────────────────────────────
+ 
+ const Contact = () => {
+-  // State for form fields
+-  const [formData, setFormData] = useState({
+-    name: '',
+-    email: '',
+-    subject: '',
+-    message: '',
+-  });
++  const [formData, setFormData] = useState(INITIAL_FORM);
++  const [errors, setErrors] = useState({});
++  const [successMessage, setSuccess] = useState('');
+   const [isSubmitting, setIsSubmitting] = useState(false);
+-  const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error'
+ 
+-  // Handle input changes
+-  const handleChange = (e) => {
++  // ── handlers ────────────────────────────────────────────────────────────
++
++  const handleChange = useCallback((e) => {
+     const { name, value } = e.target;
+     setFormData((prev) => ({ ...prev, [name]: value }));
+-  };
++    // Clear the field error as the user corrects it
++    setErrors((prev) => {
++      if (!prev[name]) return prev;
++      const next = { ...prev };
++      delete next[name];
++      return next;
++    });
++  }, []);
+ 
+-  // Handle form submission
+   const handleSubmit = async (e) => {
+     e.preventDefault();
+     setIsSubmitting(true);
+-    setSubmitStatus(null);
++    setErrors({});
++    setSuccess('');
+ 
+-    // Basic validation
+-    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+-      setSubmitStatus('error');
+-      setIsSubmitting(false);
+-      alert('Please fill in all fields.');
+-      return;
+-    }
+-
+-    // Simulate API call (replace with actual fetch to your backend)
+     try {
+-      // Simulate network delay
+-      await new Promise((resolve) => setTimeout(resolve, 1000));
+-      console.log('Form submitted:', formData);
+-      setSubmitStatus('success');
+-      setFormData({ name: '', email: '', subject: '', message: '' });
+-      alert('Your message has been sent. Thank you!');
+-    } catch (error) {
+-      setSubmitStatus('error');
+-      alert('Something went wrong. Please try again later.');
++      await api.post('/contact/', formData);
++      setSuccess("Your message has been sent. We'll get back to you shortly!");
++      setFormData(INITIAL_FORM);
++    } catch (err) {
++      const parsed = parseErrors(err);
++      setErrors(parsed);
+     } finally {
+       setIsSubmitting(false);
+     }
+   };
+ 
++  // ── render ──────────────────────────────────────────────────────────────
++
+   return (
+     <>
+-      {/* Page Title */}
++      {/* ── Page Title ── */}
+       <div className="bg-gray-50 py-12 border-b">
+         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+           <h1 className="text-3xl font-bold text-gray-900 mb-2 md:mb-0">Contact</h1>
+@@ -65,24 +84,23 @@ const Contact = () => {
+         </div>
+       </div>
+ 
+-      {/* Contact Info Boxes */}
++      {/* ── Info Cards ── */}
+       <section className="py-12 bg-white">
+         <div className="container mx-auto px-4">
+           <div className="grid md:grid-cols-3 gap-6 mb-12">
+-            {/* Address Box */}
+             <div className="bg-gray-50 rounded-xl p-6 flex items-start gap-4 shadow-sm hover:shadow-md transition">
+               <div className="bg-teal-100 text-teal-700 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+-                <i className="bi bi-geo-alt text-xl"></i>
++                <i className="bi bi-geo-alt text-xl" />
+               </div>
+               <div>
+                 <h4 className="font-semibold text-lg mb-1">Our Address</h4>
+                 <p className="text-gray-600 text-sm">1842 Maple Avenue, Portland, Oregon 97204</p>
+               </div>
+             </div>
+-            {/* Email Box */}
++
+             <div className="bg-gray-50 rounded-xl p-6 flex items-start gap-4 shadow-sm hover:shadow-md transition">
+               <div className="bg-teal-100 text-teal-700 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+-                <i className="bi bi-envelope text-xl"></i>
++                <i className="bi bi-envelope text-xl" />
+               </div>
+               <div>
+                 <h4 className="font-semibold text-lg mb-1">Email Address</h4>
+@@ -90,22 +108,22 @@ const Contact = () => {
+                 <p className="text-gray-600 text-sm">contact@example.com</p>
+               </div>
+             </div>
+-            {/* Hours Box */}
++
+             <div className="bg-gray-50 rounded-xl p-6 flex items-start gap-4 shadow-sm hover:shadow-md transition">
+               <div className="bg-teal-100 text-teal-700 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+-                <i className="bi bi-headset text-xl"></i>
++                <i className="bi bi-headset text-xl" />
+               </div>
+               <div>
+                 <h4 className="font-semibold text-lg mb-1">Hours of Operation</h4>
+-                <p className="text-gray-600 text-sm">Sunday-Fri: 9 AM - 6 PM</p>
+-                <p className="text-gray-600 text-sm">Saturday: 9 AM - 4 PM</p>
++                <p className="text-gray-600 text-sm">Sunday–Fri: 9 AM – 6 PM</p>
++                <p className="text-gray-600 text-sm">Saturday: 9 AM – 4 PM</p>
+               </div>
+             </div>
+           </div>
+         </div>
+       </section>
+ 
+-      {/* Google Maps Section */}
++      {/* ── Map ── */}
+       <div className="w-full">
+         <iframe
+           src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d48389.78314118045!2d-74.006138!3d40.710059!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a22a3bda30d%3A0xb89d1fe6bc499443!2sDowntown%20Conference%20Center!5e0!3m2!1sen!2sus!4v1676961268712!5m2!1sen!2sus"
+@@ -117,72 +135,137 @@ const Contact = () => {
+           referrerPolicy="no-referrer-when-downgrade"
+           title="Google Map"
+           className="w-full"
+-        ></iframe>
++        />
+       </div>
+ 
+-      {/* Contact Form Overlapping Container */}
+-      <div className="container mx-auto px-4 relative -mt-20 z-10">
++      {/* ── Contact Form (overlapping map) ── */}
++      <div className="container mx-auto px-4 relative -mt-20 z-10 pb-16">
+         <div className="max-w-4xl mx-auto">
+           <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+-            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6">Get in Touch</h2>
+-            <form onSubmit={handleSubmit} className="space-y-5">
++            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6">
++              Get in Touch
++            </h2>
++
++            {/* ── Global / non-field error ── */}
++            {errors.non_field_errors && (
++              <div className="mb-5 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
++                <i className="bi bi-exclamation-triangle-fill flex-shrink-0" />
++                <span>{errors.non_field_errors}</span>
++              </div>
++            )}
++
++            {/* ── Success banner ── */}
++            {successMessage && (
++              <div className="mb-5 flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
++                <i className="bi bi-check-circle-fill flex-shrink-0" />
++                <span>{successMessage}</span>
++              </div>
++            )}
++
++            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
++              {/* Name + Email */}
+               <div className="grid md:grid-cols-2 gap-5">
++                {/* Name */}
++                <div>
++                  <div className="relative">
++                    <i className="bi bi-person absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
++                    <input
++                      type="text"
++                      name="name"
++                      value={formData.name}
++                      onChange={handleChange}
++                      placeholder="Full Name"
++                      autoComplete="name"
++                      className={inputClass(!!errors.name)}
++                    />
++                  </div>
++                  <FieldError message={errors.name} />
++                </div>
++
++                {/* Email */}
++                <div>
++                  <div className="relative">
++                    <i className="bi bi-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
++                    <input
++                      type="email"
++                      name="email"
++                      value={formData.email}
++                      onChange={handleChange}
++                      placeholder="Email Address"
++                      autoComplete="email"
++                      className={inputClass(!!errors.email)}
++                    />
++                  </div>
++                  <FieldError message={errors.email} />
++                </div>
++              </div>
++
++              {/* Subject */}
++              <div>
+                 <div className="relative">
+-                  <i className="bi bi-person absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
++                  <i className="bi bi-text-left absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                   <input
+                     type="text"
+-                    name="name"
+-                    value={formData.name}
++                    name="subject"
++                    value={formData.subject}
+                     onChange={handleChange}
+-                    placeholder="First Name"
+-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+-                    required
++                    placeholder="Subject"
++                    className={inputClass(!!errors.subject)}
+                   />
+                 </div>
++                <FieldError message={errors.subject} />
++              </div>
++
++              {/* Message */}
++              <div>
+                 <div className="relative">
+-                  <i className="bi bi-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+-                  <input
+-                    type="email"
+-                    name="email"
+-                    value={formData.email}
++                  <i className="bi bi-chat-dots absolute left-3 top-4 text-gray-400 pointer-events-none" />
++                  <textarea
++                    name="message"
++                    value={formData.message}
+                     onChange={handleChange}
+-                    placeholder="Email Address"
+-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+-                    required
++                    placeholder="Write your message…"
++                    rows={5}
++                    className={inputClass(!!errors.message)}
+                   />
+                 </div>
++                <FieldError message={errors.message} />
+               </div>
+-              <div className="relative">
+-                <i className="bi bi-text-left absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+-                <input
+-                  type="text"
+-                  name="subject"
+-                  value={formData.subject}
+-                  onChange={handleChange}
+-                  placeholder="Subject"
+-                  className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+-                  required
+-                />
+-              </div>
+-              <div className="relative">
+-                <i className="bi bi-chat-dots absolute left-3 top-4 text-gray-400"></i>
+-                <textarea
+-                  name="message"
+-                  value={formData.message}
+-                  onChange={handleChange}
+-                  placeholder="Write Message..."
+-                  rows="5"
+-                  className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+-                  required
+-                ></textarea>
+-              </div>
++
++              {/* Submit */}
+               <div className="text-center">
+                 <button
+                   type="submit"
+                   disabled={isSubmitting}
+-                  className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-8 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
++                  className="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 active:bg-teal-800
++                             text-white font-semibold py-3 px-8 rounded-lg transition duration-200
++                             disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+-                  {isSubmitting ? 'SENDING...' : 'SEND MESSAGE'}
++                  {isSubmitting ? (
++                    <>
++                      <svg
++                        className="animate-spin h-4 w-4"
++                        xmlns="http://www.w3.org/2000/svg"
++                        fill="none"
++                        viewBox="0 0 24 24"
++                        aria-hidden="true"
++                      >
++                        <circle
++                          className="opacity-25"
++                          cx="12" cy="12" r="10"
++                          stroke="currentColor" strokeWidth="4"
++                        />
++                        <path
++                          className="opacity-75"
++                          fill="currentColor"
++                          d="M4 12a8 8 0 018-8v8H4z"
++                        />
++                      </svg>
++                      Sending…
++                    </>
++                  ) : (
++                    'Send Message'
++                  )}
+                 </button>
+               </div>
+             </form>
+@@ -193,4 +276,4 @@ const Contact = () => {
+   );
+ };
+ 
+-export default Contact;
+\ No newline at end of file
++export default Contact;

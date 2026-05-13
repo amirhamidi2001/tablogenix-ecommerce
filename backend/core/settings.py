@@ -38,12 +38,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third-party
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
+    # Local
     "accounts.apps.AccountsConfig",
+    "contact.apps.ContactConfig",
 ]
 
 MIDDLEWARE = [
@@ -173,16 +176,16 @@ SIMPLE_JWT = {
 }
 
 # EMAIL SETTINGS
-# if DEBUG:
-#     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-# else:
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = "smtp.gmail.com"
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+    DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
 
 # Frontend URL (used when building password-reset links)
 FRONTEND_URL = "http://localhost:3000"
