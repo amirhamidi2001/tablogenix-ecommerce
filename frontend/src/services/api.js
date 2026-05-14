@@ -8,11 +8,11 @@ const api = axios.create({
 });
 
 // ─── Token helpers ─────────────────────────────────────────────────────────
-export const getAccessToken  = () => localStorage.getItem('access_token');
+export const getAccessToken = () => localStorage.getItem('access_token');
 export const getRefreshToken = () => localStorage.getItem('refresh_token');
 
 export const setTokens = ({ access, refresh }) => {
-  localStorage.setItem('access_token',  access);
+  localStorage.setItem('access_token', access);
   localStorage.setItem('refresh_token', refresh);
 };
 
@@ -40,7 +40,7 @@ const isAuthEndpoint = (config) =>
   AUTH_PATHS.some((path) => config?.url?.includes(path));
 
 let _isRefreshing = false;
-let _queue        = [];
+let _queue = [];
 
 const processQueue = (error, token = null) => {
   _queue.forEach(({ resolve, reject }) =>
@@ -56,7 +56,7 @@ api.interceptors.response.use(
 
     if (
       error.response?.status !== 401 ||
-      original._retried              ||
+      original._retried ||
       isAuthEndpoint(original)
     ) {
       return Promise.reject(error);
@@ -71,7 +71,7 @@ api.interceptors.response.use(
     }
 
     original._retried = true;
-    _isRefreshing     = true;
+    _isRefreshing = true;
 
     try {
       const refresh = getRefreshToken();
@@ -163,5 +163,43 @@ export const getBrands = (search = '') =>
  */
 export const getColors = () =>
   api.get('/colors/');
+
+// ─── Cart API calls ────────────────────────────────────────────────────────
+
+/**
+ * Retrieve the current user's cart.
+ * Returns the full Cart object with nested items.
+ */
+export const getCart = () =>
+  api.get('/cart/');
+
+/**
+ * Add a product to the cart (or increment quantity if already present).
+ * @param {number} productId
+ * @param {number} [quantity=1]
+ */
+export const addToCart = (productId, quantity = 1) =>
+  api.post('/cart/', { product_id: productId, quantity });
+
+/**
+ * Update the quantity of a specific cart item.
+ * @param {number} itemId
+ * @param {number} quantity  Must be >= 1
+ */
+export const updateCartItem = (itemId, quantity) =>
+  api.patch(`/cart/item/${itemId}/`, { quantity });
+
+/**
+ * Remove a specific item from the cart.
+ * @param {number} itemId
+ */
+export const removeCartItem = (itemId) =>
+  api.delete(`/cart/item/${itemId}/`);
+
+/**
+ * Remove all items from the cart.
+ */
+export const clearCart = () =>
+  api.delete('/cart/clear/');
 
 export default api;

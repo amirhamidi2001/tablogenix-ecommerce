@@ -1,6 +1,8 @@
+// src/components/Header.jsx
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import api, { getAccessToken, clearTokens, isAuthenticated as isTokenValid } from '../services/api';
+import api, { getAccessToken, clearTokens } from '../services/api';
+import { useCart } from '../context/CartContext';   // <-- ADDED
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -10,6 +12,9 @@ const Header = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Get live cart count from context
+  const { cartCount } = useCart();   // <-- ADDED
 
   // Fetch user profile if authenticated
   const fetchUserProfile = async () => {
@@ -28,7 +33,6 @@ const Header = () => {
       const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
       setUserName(fullName || profile.email.split('@')[0] || 'User');
     } catch (error) {
-      // Token invalid or expired
       if (error.response?.status === 401) {
         clearTokens();
         setIsAuthenticated(false);
@@ -49,7 +53,7 @@ const Header = () => {
     navigate('/');
   };
 
-  // Listen for auth changes (login/register in other tabs/windows)
+  // Listen for auth changes
   useEffect(() => {
     fetchUserProfile();
 
@@ -60,7 +64,6 @@ const Header = () => {
     };
     window.addEventListener('storage', handleStorageChange);
 
-    // Custom event for same-tab updates (can be dispatched from login/register components)
     const handleAuthChange = () => fetchUserProfile();
     window.addEventListener('auth-change', handleAuthChange);
 
@@ -68,7 +71,7 @@ const Header = () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('auth-change', handleAuthChange);
     };
-  }, [location.pathname]); // re-fetch on route change to keep header in sync
+  }, [location.pathname]);
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md">
@@ -82,7 +85,6 @@ const Header = () => {
           </div>
 
           <div className="flex gap-6">
-            {/* Announcement Slider */}
             <div className="overflow-hidden h-6">
               <div className="animate-marquee whitespace-nowrap text-teal-700 font-medium">
                 🚚 Free shipping on orders over $50 &nbsp;&nbsp;|&nbsp;&nbsp;
@@ -92,7 +94,6 @@ const Header = () => {
             </div>
 
             <div className="flex gap-3">
-              {/* Language Dropdown */}
               <div className="dropdown relative group">
                 <button className="flex items-center gap-1 text-emerald-700 hover:text-teal-700">
                   <i className="bi bi-translate"></i> EN <i className="bi bi-chevron-down text-xs"></i>
@@ -102,7 +103,6 @@ const Header = () => {
                   <a href="#" className="block px-4 py-2 text-sm hover:bg-emerald-100">Español</a>
                 </div>
               </div>
-              {/* Currency Dropdown */}
               <div className="dropdown relative group">
                 <button className="flex items-center gap-1 text-emerald-700 hover:text-teal-700">
                   <i className="bi bi-currency-dollar"></i> USD <i className="bi bi-chevron-down text-xs"></i>
@@ -119,12 +119,10 @@ const Header = () => {
 
       {/* ========== Main Header ========== */}
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        {/* Logo */}
         <Link to="/" className="text-2xl font-bold text-emerald-800">
           TabloGenix
         </Link>
 
-        {/* Desktop Search Form */}
         <form className="hidden md:flex border border-emerald-300 rounded-full overflow-hidden w-96 shadow-sm">
           <input
             type="text"
@@ -136,9 +134,7 @@ const Header = () => {
           </button>
         </form>
 
-        {/* Actions */}
         <div className="flex items-center gap-4">
-          {/* Mobile Search Toggle */}
           <button
             className="md:hidden text-emerald-700 text-xl"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
@@ -146,7 +142,7 @@ const Header = () => {
             <i className="bi bi-search"></i>
           </button>
 
-          {/* Account Dropdown - CONDITIONAL CONTENT BASED ON AUTH */}
+          {/* Account Dropdown (unchanged) */}
           <div className="dropdown relative group">
             <button className="text-emerald-700 text-xl hover:text-teal-700">
               <i className="bi bi-person"></i>
@@ -155,7 +151,6 @@ const Header = () => {
               {!loading && (
                 <>
                   {isAuthenticated ? (
-                    // ─── AUTHENTICATED DROPDOWN ─────────────────────────────
                     <>
                       <div className="p-4 border-b">
                         <h6 className="font-semibold">Welcome back, {userName}!</h6>
@@ -167,12 +162,11 @@ const Header = () => {
                         <Link to="/account?tab=addresses" className="block px-4 py-2 text-sm hover:bg-emerald-50">Addresses</Link>
                         <Link to="/account?tab=settings" className="block px-4 py-2 text-sm hover:bg-emerald-50">Settings</Link>
                         <button onClick={handleLogout} className="w-full text-center block px-4 py-2 text-sm hover:bg-red-50 text-red-600">
-                          Logout
+                          <i className="bi bi-box-arrow-right me-1"></i> Logout
                         </button>
                       </div>
                     </>
                   ) : (
-                    // ─── UNAUTHENTICATED DROPDOWN (LOGIN + REGISTER BUTTONS) ──
                     <>
                       <div className="p-4 border-b">
                         <h6 className="font-semibold">Welcome to TabloGenix</h6>
@@ -193,26 +187,27 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Wishlist */}
+          {/* Wishlist (static 0 for now) */}
           <Link to="/account?tab=wishlist" className="relative text-emerald-700 text-xl hover:text-teal-700">
             <i className="bi bi-heart"></i>
             <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
           </Link>
 
-          {/* Cart */}
+          {/* Cart - DYNAMIC COUNT from context */}
           <Link to="/cart" className="relative text-emerald-700 text-xl hover:text-teal-700">
             <i className="bi bi-cart3"></i>
-            <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+            <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              {cartCount}
+            </span>
           </Link>
 
-          {/* Mobile Menu Toggle */}
           <button className="md:hidden text-emerald-700 text-2xl" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             <i className="bi bi-list"></i>
           </button>
         </div>
       </div>
 
-      {/* ========== Navigation Menu (Desktop) ========== */}
+      {/* Desktop Navigation (unchanged) */}
       <nav className="hidden md:block bg-emerald-800 text-white">
         <div className="container mx-auto px-4">
           <ul className="flex space-x-6">
@@ -233,7 +228,7 @@ const Header = () => {
         </div>
       </nav>
 
-      {/* ========== Mobile Search Form ========== */}
+      {/* Mobile Search & Menu (unchanged) */}
       {mobileSearchOpen && (
         <div className="md:hidden bg-white p-4 border-t shadow-lg">
           <form className="flex border border-emerald-300 rounded-full overflow-hidden">
@@ -245,7 +240,6 @@ const Header = () => {
         </div>
       )}
 
-      {/* ========== Mobile Menu ========== */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t shadow-lg p-4">
           <ul className="space-y-3">

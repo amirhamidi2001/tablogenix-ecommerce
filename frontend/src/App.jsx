@@ -1,7 +1,10 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { CartProvider } from './context/CartContext';
+
 import Header from './components/Header';
 import Footer from './components/Footer';
+
 import Home from './pages/Home';
 import About from './pages/About';
 import Account from './pages/Account';
@@ -20,7 +23,6 @@ import PaymentMethods from './pages/PaymentMethods';
 import Privacy from './pages/Privacy';
 import ProductDetails from './pages/ProductDetails';
 import ProductLists from './pages/ProductLists';
-// import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
 import ReturnPolicy from './pages/ReturnPolicy';
 import SearchResults from './pages/SearchResults';
@@ -31,38 +33,41 @@ import Tos from './pages/Tos';
 function App() {
   return (
     <BrowserRouter>
-      <Header />
-      <main className="min-h-screen">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/category" element={<Category />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/confirm-email" element={<ConfirmEmail />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/faq" element={<Faq />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="*" element={<NotFound />} />
-          <Route path="/order-confirmation" element={<OrderConfirmation />} />
-          <Route path="/payment-methods" element={<PaymentMethods />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/product-details" element={<ProductDetails />} />
-          <Route path="/product/:slug" element={<ProductDetails />} />
-          <Route path="/product-lists" element={<ProductLists />} />
-          {/* <Route path="/register" element={<Register />} /> */}
-          <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
-          <Route path="/return-policy" element={<ReturnPolicy />} />
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/shipping-info" element={<ShippingInfo />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/tos" element={<Tos />} />
-        </Routes>
-      </main>
-      <Footer />
+      <CartProvider>
+        <Header />
+
+        <main className="min-h-screen">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/category" element={<Category />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/confirm-email" element={<ConfirmEmail />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/faq" element={<Faq />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<NotFound />} />
+            <Route path="/order-confirmation" element={<OrderConfirmation />} />
+            <Route path="/payment-methods" element={<PaymentMethods />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/product-details" element={<ProductDetails />} />
+            <Route path="/product/:slug" element={<ProductDetails />} />
+            <Route path="/product-lists" element={<ProductLists />} />
+            <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
+            <Route path="/return-policy" element={<ReturnPolicy />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/shipping-info" element={<ShippingInfo />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/tos" element={<Tos />} />
+          </Routes>
+        </main>
+
+        <Footer />
+      </CartProvider>
     </BrowserRouter>
   );
 }

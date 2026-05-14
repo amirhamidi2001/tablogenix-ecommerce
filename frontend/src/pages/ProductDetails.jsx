@@ -1,6 +1,8 @@
+// src/pages/ProductDetails.jsx
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getProductDetails, getRelatedProducts } from '../services/api';
+import { useCart } from '../context/CartContext';
 
 // ─── Spinner ────────────────────────────────────────────────────────────────
 const Spinner = () => (
@@ -21,6 +23,27 @@ const Stars = ({ rating, size = 'text-base' }) => {
           className={`bi ${i < full ? 'bi-star-fill' : i === full && half ? 'bi-star-half' : 'bi-star'}`}
         />
       ))}
+    </div>
+  );
+};
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-white transition-all ${type === 'success' ? 'bg-teal-600' : 'bg-red-500'
+        }`}
+    >
+      <i className={`bi ${type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'} text-lg`}></i>
+      <span className="text-sm font-medium">{message}</span>
+      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100">
+        <i className="bi bi-x"></i>
+      </button>
     </div>
   );
 };
@@ -71,6 +94,7 @@ const RelatedCard = ({ product }) => {
 const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -85,6 +109,14 @@ const ProductDetails = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Cart action state
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => setToast({ message, type });
+  const hideToast = () => setToast(null);
 
   // ── Fetch product ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -181,6 +213,25 @@ const ProductDetails = () => {
   const increaseQty = () => { if (quantity < maxQty) setQuantity((q) => q + 1); };
   const decreaseQty = () => { if (quantity > 1) setQuantity((q) => q - 1); };
 
+  // ── Cart handlers ──────────────────────────────────────────────────────────
+  const handleAddToCart = async () => {
+    setAddingToCart(true);
+    const result = await addToCart(product.id, quantity);
+    setAddingToCart(false);
+    showToast(result.message, result.success ? 'success' : 'error');
+  };
+
+  const handleBuyNow = async () => {
+    setBuyingNow(true);
+    const result = await addToCart(product.id, quantity);
+    setBuyingNow(false);
+    if (result.success) {
+      navigate('/cart');
+    } else {
+      showToast(result.message, 'error');
+    }
+  };
+
   // ── Rating distribution (from reviews) ────────────────────────────────────
   const reviews = product.reviews || [];
   const ratingDist = [5, 4, 3, 2, 1].map((stars) => {
@@ -191,6 +242,9 @@ const ProductDetails = () => {
 
   return (
     <>
+      {/* Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
+
       {/* Page Title */}
       <div className="bg-gray-50 py-12 border-b">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
@@ -241,7 +295,6 @@ const ProductDetails = () => {
                     </button>
                   </>
                 )}
-                {/* Image counter */}
                 {allImages.length > 1 && (
                   <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
                     {currentIndex + 1} / {allImages.length}
@@ -394,7 +447,9 @@ const ProductDetails = () => {
                     <input
                       type="number"
                       value={quantity}
-                      onChange={(e) => setQuantity(Math.min(maxQty, Math.max(1, parseInt(e.target.value) || 1)))}
+                      onChange={(e) =>
+                        setQuantity(Math.min(maxQty, Math.max(1, parseInt(e.target.value) || 1)))
+                      }
                       className="w-16 text-center border-x border-gray-300 py-2 outline-none"
                       min="1"
                       max={maxQty}
@@ -407,258 +462,310 @@ const ProductDetails = () => {
                       <i className="bi bi-plus"></i>
                     </button>
                   </div>
+                  <span className="text-sm text-gray-500">
+                    {product.stock > 0 ? `${product.stock} available` : 'Out of stock'}
+                  </span>
                 </div>
+
+                {/* CTA Buttons */}
                 <div className="flex flex-wrap gap-3">
                   <button
-                    disabled={product.stock === 0}
+                    onClick={handleAddToCart}
+                    disabled={product.stock === 0 || addingToCart}
                     className="flex-1 bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => alert(`Added ${quantity} × ${product.name} to cart`)}
                   >
-                    <i className="bi bi-bag-plus"></i> Add to Cart
+                    {addingToCart ? (
+                      <><i className="bi bi-arrow-clockwise animate-spin"></i> Adding…</>
+                    ) : (
+                      <><i className="bi bi-bag-plus"></i> Add to Cart</>
+                    )}
                   </button>
                   <button
-                    disabled={product.stock === 0}
+                    onClick={handleBuyNow}
+                    disabled={product.stock === 0 || buyingNow}
                     className="flex-1 border border-teal-600 text-teal-600 py-3 rounded-lg font-semibold hover:bg-teal-50 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => alert('Proceed to checkout')}
                   >
-                    <i className="bi bi-lightning"></i> Buy Now
+                    {buyingNow ? (
+                      <><i className="bi bi-arrow-clockwise animate-spin"></i> Processing…</>
+                    ) : (
+                      <><i className="bi bi-lightning"></i> Buy Now</>
+                    )}
                   </button>
-                  <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition" title="Wishlist">
-                    <i className="bi bi-heart"></i>
+                  <button
+                    className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                    title="Add to Wishlist"
+                  >
+                    <i className="bi bi-heart text-gray-600"></i>
                   </button>
                 </div>
               </div>
 
-              {/* Benefits */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <div className="flex items-center gap-2"><i className="bi bi-truck text-teal-600"></i><span className="text-sm">Free delivery on orders over $75</span></div>
-                <div className="flex items-center gap-2"><i className="bi bi-arrow-clockwise text-teal-600"></i><span className="text-sm">45-day hassle-free returns</span></div>
-                <div className="flex items-center gap-2"><i className="bi bi-shield-check text-teal-600"></i><span className="text-sm">3-year manufacturer warranty</span></div>
-                <div className="flex items-center gap-2"><i className="bi bi-headset text-teal-600"></i><span className="text-sm">24/7 customer support available</span></div>
+              {/* Social Share / Meta */}
+              <div className="border-t border-gray-100 pt-4 flex gap-4 text-sm text-gray-500">
+                <span className="flex items-center gap-1">
+                  <i className="bi bi-share"></i>
+                  <a href="#" className="hover:text-teal-600">Share</a>
+                </span>
+                <span className="flex items-center gap-1">
+                  <i className="bi bi-heart"></i>
+                  <a href="#" className="hover:text-teal-600">Wishlist</a>
+                </span>
+                {product.brand && (
+                  <span className="flex items-center gap-1">
+                    <i className="bi bi-shop"></i>
+                    <a href="#" className="hover:text-teal-600">{product.brand.name}</a>
+                  </span>
+                )}
+              </div>
+
+              {/* Delivery Info */}
+              <div className="mt-4 grid grid-cols-3 gap-3 text-center text-xs text-gray-500">
+                <div className="bg-gray-50 p-2 rounded-lg">
+                  <i className="bi bi-truck text-teal-600 block text-lg mb-1"></i>
+                  Free Shipping
+                </div>
+                <div className="bg-gray-50 p-2 rounded-lg">
+                  <i className="bi bi-arrow-return-left text-teal-600 block text-lg mb-1"></i>
+                  30-Day Returns
+                </div>
+                <div className="bg-gray-50 p-2 rounded-lg">
+                  <i className="bi bi-shield-check text-teal-600 block text-lg mb-1"></i>
+                  Secure Pay
+                </div>
               </div>
             </div>
           </div>
 
-          {/* ── Tabs ─────────────────────────────────────────────────────── */}
-          <div className="mt-12">
-            <div className="flex border-b border-gray-200 mb-6">
-              {[
-                { key: 'overview', label: 'Overview' },
-                { key: 'technical', label: 'Technical Details' },
-                { key: 'reviews', label: `Reviews (${reviews.length})` },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`px-6 py-3 font-semibold transition ${activeTab === tab.key ? 'text-teal-600 border-b-2 border-teal-600' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+          {/* ── Tabs Section ─────────────────────────────────────────────── */}
+          <div className="mt-16">
+            <div className="border-b border-gray-200 mb-8">
+              <nav className="flex gap-0 overflow-x-auto">
+                {[
+                  { id: 'overview', label: 'Overview' },
+                  { id: 'specifications', label: 'Specifications' },
+                  { id: 'technical', label: 'Technical Details' },
+                  { id: 'reviews', label: `Reviews (${product.reviews_count || 0})` },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${activeTab === tab.id
+                        ? 'border-teal-600 text-teal-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
             </div>
 
-            <div className="bg-white rounded-xl">
-              {/* Overview Tab */}
-              {activeTab === 'overview' && (
-                <div className="grid md:grid-cols-3 gap-8">
-                  <div className="md:col-span-2">
-                    <h3 className="text-xl font-bold mb-3">Product Overview</h3>
-                    <p className="text-gray-600 mb-6">
-                      {product.description || product.short_description ||
-                        'No description available for this product.'}
-                    </p>
-                    <h4 className="text-lg font-semibold mb-4">Key Highlights</h4>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="bg-gray-50 p-4 rounded-xl text-center">
-                        <i className="bi bi-award text-2xl text-teal-600 mb-2 block"></i>
-                        <h5 className="font-semibold">Premium Quality</h5>
-                        <p className="text-sm text-gray-500">Crafted with top-tier materials for lasting durability</p>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded-xl text-center">
-                        <i className="bi bi-battery-charging text-2xl text-teal-600 mb-2 block"></i>
-                        <h5 className="font-semibold">High Performance</h5>
-                        <p className="text-sm text-gray-500">Engineered for peak performance in every use</p>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded-xl text-center">
-                        <i className="bi bi-wifi text-2xl text-teal-600 mb-2 block"></i>
-                        <h5 className="font-semibold">Smart Technology</h5>
-                        <p className="text-sm text-gray-500">Integrated with the latest technology</p>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded-xl text-center">
-                        <i className="bi bi-person-check text-2xl text-teal-600 mb-2 block"></i>
-                        <h5 className="font-semibold">Comfort First</h5>
-                        <p className="text-sm text-gray-500">Designed with user comfort as the top priority</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-6 rounded-xl">
-                    <h4 className="text-lg font-semibold mb-4">Package Contents</h4>
-                    <ul className="space-y-2">
-                      <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> {product.name}</li>
-                      <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> Premium Carrying Case</li>
-                      <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> USB-C Fast Charging Cable</li>
-                      <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> Quick Start Guide</li>
-                      <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> Warranty Documentation</li>
-                    </ul>
-                    {product.brand && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-sm text-gray-600">
-                          Brand: <span className="font-semibold">{product.brand.name}</span>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <div className="prose max-w-none text-gray-600">
+                {product.description ? (
+                  <p>{product.description}</p>
+                ) : (
+                  <p className="text-gray-400 italic">No product description available.</p>
+                )}
+              </div>
+            )}
 
-              {/* Technical Details Tab */}
-              {activeTab === 'technical' && (
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div>
-                    <h4 className="text-lg font-semibold mb-3">Product Information</h4>
-                    <div className="bg-gray-50 rounded-xl divide-y">
-                      <div className="flex justify-between p-3">
-                        <span className="text-gray-600">Category</span>
-                        <span className="font-medium">{product.category?.name || '—'}</span>
-                      </div>
-                      <div className="flex justify-between p-3">
-                        <span className="text-gray-600">Brand</span>
-                        <span className="font-medium">{product.brand?.name || '—'}</span>
-                      </div>
-                      <div className="flex justify-between p-3">
-                        <span className="text-gray-600">SKU / Slug</span>
-                        <span className="font-medium text-sm">{product.slug}</span>
-                      </div>
-                      <div className="flex justify-between p-3">
-                        <span className="text-gray-600">Stock</span>
-                        <span className={`font-medium ${product.stock > 0 ? 'text-teal-700' : 'text-red-600'}`}>
-                          {product.stock > 0 ? `${product.stock} units` : 'Out of Stock'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between p-3">
-                        <span className="text-gray-600">Rating</span>
-                        <span className="font-medium">{product.rating} / 5</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold mb-3">Available Colors</h4>
-                    {product.colors?.length > 0 ? (
-                      <div className="bg-gray-50 rounded-xl p-4">
-                        <div className="flex flex-wrap gap-3">
-                          {product.colors.map(({ color }) => (
-                            <div key={color.id} className="flex items-center gap-2">
-                              <span
-                                className="w-5 h-5 rounded-full border border-gray-300 inline-block"
-                                style={{ backgroundColor: color.hex_code }}
-                              />
-                              <span className="text-sm">{color.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-sm">No color variants available.</p>
-                    )}
-                    <h4 className="text-lg font-semibold mb-3 mt-6">Pricing</h4>
-                    <div className="bg-gray-50 rounded-xl divide-y">
-                      <div className="flex justify-between p-3">
-                        <span className="text-gray-600">Current Price</span>
-                        <span className="font-bold text-teal-700">${Number(product.price).toFixed(2)}</span>
-                      </div>
-                      {product.original_price && (
-                        <div className="flex justify-between p-3">
-                          <span className="text-gray-600">Original Price</span>
-                          <span className="font-medium line-through text-gray-400">${Number(product.original_price).toFixed(2)}</span>
-                        </div>
-                      )}
-                      {discountPercent > 0 && (
-                        <div className="flex justify-between p-3">
-                          <span className="text-gray-600">Discount</span>
-                          <span className="font-medium text-red-500">{discountPercent}% off</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Reviews Tab */}
-              {activeTab === 'reviews' && (
+            {/* Specifications Tab */}
+            {activeTab === 'specifications' && (
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  {/* Rating Overview */}
-                  <div className="flex flex-col md:flex-row gap-8 mb-10 p-6 bg-gray-50 rounded-xl">
-                    <div className="text-center md:w-1/3">
-                      <div className="text-5xl font-bold text-gray-800">{product.rating}</div>
-                      <div className="flex justify-center my-2">
-                        <Stars rating={Number(product.rating)} />
-                      </div>
-                      <div className="text-gray-500 text-sm">{product.reviews_count} customer reviews</div>
+                  <h4 className="font-semibold text-lg mb-4">Key Features</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <i className="bi bi-star text-2xl text-teal-600 mb-2 block"></i>
+                      <h5 className="font-semibold">Premium Quality</h5>
+                      <p className="text-sm text-gray-500">Built to the highest standards</p>
                     </div>
-                    <div className="flex-1 space-y-2">
-                      {ratingDist.map((item) => (
-                        <div key={item.stars} className="flex items-center gap-3">
-                          <span className="text-sm w-8">{item.stars}★</span>
-                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-yellow-400 rounded-full transition-all duration-500"
-                              style={{ width: `${item.pct}%` }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-500 w-6">{item.count}</span>
-                        </div>
-                      ))}
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <i className="bi bi-patch-check text-2xl text-teal-600 mb-2 block"></i>
+                      <h5 className="font-semibold">Certified</h5>
+                      <p className="text-sm text-gray-500">Tested and certified safe</p>
                     </div>
-                    <div className="text-center md:w-1/3">
-                      <h4 className="font-semibold">Share Your Experience</h4>
-                      <p className="text-sm text-gray-500 mb-3">Help others make informed decisions</p>
-                      <button className="bg-teal-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-teal-700">
-                        Write Review
-                      </button>
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <i className="bi bi-box-seam text-2xl text-teal-600 mb-2 block"></i>
+                      <h5 className="font-semibold">Ready to Ship</h5>
+                      <p className="text-sm text-gray-500">Fast and reliable shipping</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl text-center">
+                      <i className="bi bi-person-check text-2xl text-teal-600 mb-2 block"></i>
+                      <h5 className="font-semibold">Comfort First</h5>
+                      <p className="text-sm text-gray-500">Designed for your comfort</p>
                     </div>
                   </div>
-
-                  {/* Reviews list */}
-                  {reviews.length > 0 ? (
-                    <div className="space-y-6">
-                      {reviews.map((review) => (
-                        <div key={review.id} className="border-b pb-6">
-                          <div className="flex gap-4 mb-3">
-                            <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-lg flex-shrink-0">
-                              {review.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="font-semibold">{review.name}</div>
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <Stars rating={review.rating} size="text-xs" />
-                                <span>{new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                              </div>
-                            </div>
-                          </div>
-                          {review.headline && (
-                            <h5 className="font-semibold text-lg mb-2">{review.headline}</h5>
-                          )}
-                          <p className="text-gray-600 mb-3">{review.comment}</p>
-                          <div className="flex gap-4">
-                            <button className="text-sm text-gray-500 hover:text-teal-600 flex items-center gap-1">
-                              <i className="bi bi-hand-thumbs-up"></i> Helpful
-                            </button>
-                            <button className="text-sm text-gray-500 hover:text-teal-600 flex items-center gap-1">
-                              <i className="bi bi-chat-dots"></i> Reply
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-gray-400">
-                      <i className="bi bi-chat-square-text text-4xl mb-3 block"></i>
-                      <p>No reviews yet. Be the first to review this product!</p>
+                </div>
+                <div className="bg-gray-50 p-6 rounded-xl">
+                  <h4 className="text-lg font-semibold mb-4">Package Contents</h4>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> {product.name}</li>
+                    <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> Premium Carrying Case</li>
+                    <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> USB-C Fast Charging Cable</li>
+                    <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> Quick Start Guide</li>
+                    <li className="flex items-center gap-2"><i className="bi bi-check-circle text-teal-600"></i> Warranty Documentation</li>
+                  </ul>
+                  {product.brand && (
+                    <div className="mt-4 pt-4 border-t">
+                      <p className="text-sm text-gray-600">
+                        Brand: <span className="font-semibold">{product.brand.name}</span>
+                      </p>
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Technical Details Tab */}
+            {activeTab === 'technical' && (
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-lg font-semibold mb-3">Product Information</h4>
+                  <div className="bg-gray-50 rounded-xl divide-y">
+                    <div className="flex justify-between p-3">
+                      <span className="text-gray-600">Category</span>
+                      <span className="font-medium">{product.category?.name || '—'}</span>
+                    </div>
+                    <div className="flex justify-between p-3">
+                      <span className="text-gray-600">Brand</span>
+                      <span className="font-medium">{product.brand?.name || '—'}</span>
+                    </div>
+                    <div className="flex justify-between p-3">
+                      <span className="text-gray-600">SKU / Slug</span>
+                      <span className="font-medium text-sm">{product.slug}</span>
+                    </div>
+                    <div className="flex justify-between p-3">
+                      <span className="text-gray-600">Stock</span>
+                      <span className={`font-medium ${product.stock > 0 ? 'text-teal-700' : 'text-red-600'}`}>
+                        {product.stock > 0 ? `${product.stock} units` : 'Out of Stock'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between p-3">
+                      <span className="text-gray-600">Rating</span>
+                      <span className="font-medium">{product.rating} / 5</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold mb-3">Available Colors</h4>
+                  {product.colors?.length > 0 ? (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <div className="flex flex-wrap gap-3">
+                        {product.colors.map(({ color }) => (
+                          <div key={color.id} className="flex items-center gap-2">
+                            <span
+                              className="w-5 h-5 rounded-full border border-gray-300 inline-block"
+                              style={{ backgroundColor: color.hex_code }}
+                            />
+                            <span className="text-sm">{color.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">No color variants available.</p>
+                  )}
+                  <h4 className="text-lg font-semibold mb-3 mt-6">Pricing</h4>
+                  <div className="bg-gray-50 rounded-xl divide-y">
+                    <div className="flex justify-between p-3">
+                      <span className="text-gray-600">Current Price</span>
+                      <span className="font-bold text-teal-700">${Number(product.price).toFixed(2)}</span>
+                    </div>
+                    {product.original_price && (
+                      <div className="flex justify-between p-3">
+                        <span className="text-gray-600">Original Price</span>
+                        <span className="font-medium line-through text-gray-400">${Number(product.original_price).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {discountPercent > 0 && (
+                      <div className="flex justify-between p-3">
+                        <span className="text-gray-600">Discount</span>
+                        <span className="font-medium text-red-500">{discountPercent}% off</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reviews Tab */}
+            {activeTab === 'reviews' && (
+              <div>
+                {/* Rating Overview */}
+                <div className="flex flex-col md:flex-row gap-8 mb-10 p-6 bg-gray-50 rounded-xl">
+                  <div className="text-center md:w-1/3">
+                    <div className="text-5xl font-bold text-gray-800">{product.rating}</div>
+                    <div className="flex justify-center my-2">
+                      <Stars rating={Number(product.rating)} />
+                    </div>
+                    <div className="text-gray-500 text-sm">{product.reviews_count} customer reviews</div>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    {ratingDist.map((item) => (
+                      <div key={item.stars} className="flex items-center gap-3">
+                        <span className="text-sm w-8">{item.stars}★</span>
+                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-yellow-400 rounded-full transition-all duration-500"
+                            style={{ width: `${item.pct}%` }}
+                          />
+                        </div>
+                        <span className="text-sm text-gray-500 w-6">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center md:w-1/3">
+                    <h4 className="font-semibold">Share Your Experience</h4>
+                    <p className="text-sm text-gray-500 mb-3">Help others make informed decisions</p>
+                    <button className="bg-teal-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-teal-700">
+                      Write Review
+                    </button>
+                  </div>
+                </div>
+
+                {/* Reviews list */}
+                {reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border-b pb-6">
+                        <div className="flex gap-4 mb-3">
+                          <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-lg flex-shrink-0">
+                            {review.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-semibold">{review.name}</div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Stars rating={review.rating} size="text-xs" />
+                              <span>{new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                            </div>
+                          </div>
+                        </div>
+                        {review.headline && (
+                          <h5 className="font-semibold text-lg mb-2">{review.headline}</h5>
+                        )}
+                        <p className="text-gray-600 mb-3">{review.comment}</p>
+                        <div className="flex gap-4">
+                          <button className="text-sm text-gray-500 hover:text-teal-600 flex items-center gap-1">
+                            <i className="bi bi-hand-thumbs-up"></i> Helpful
+                          </button>
+                          <button className="text-sm text-gray-500 hover:text-teal-600 flex items-center gap-1">
+                            <i className="bi bi-chat-dots"></i> Reply
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-400">
+                    <i className="bi bi-chat-square-text text-4xl mb-3 block"></i>
+                    <p>No reviews yet. Be the first to review this product!</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Related Products ─────────────────────────────────────────── */}
