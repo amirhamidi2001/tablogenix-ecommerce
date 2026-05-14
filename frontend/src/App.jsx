@@ -50,8 +50,7 @@ function App() {
             <Route path="/faq" element={<Faq />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/login" element={<Login />} />
-            <Route path="*" element={<NotFound />} />
-            <Route path="/order-confirmation" element={<OrderConfirmation />} />
+            <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
             <Route path="/payment-methods" element={<PaymentMethods />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/product-details" element={<ProductDetails />} />
@@ -63,6 +62,7 @@ function App() {
             <Route path="/shipping-info" element={<ShippingInfo />} />
             <Route path="/support" element={<Support />} />
             <Route path="/tos" element={<Tos />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
 

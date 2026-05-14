@@ -1,66 +1,131 @@
 // src/pages/OrderConfirmation.jsx
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { getOrderDetail, isAuthenticated } from '../services/api';
+import { useCart } from '../context/CartContext';
 
+// ─── Status helpers ───────────────────────────────────────────────────────────
+const STATUS_STEPS = ['pending', 'processing', 'shipped', 'delivered'];
+
+const STATUS_META = {
+  pending: { label: 'Pending', icon: 'bi-clock', color: 'text-amber-500' },
+  processing: { label: 'Processing', icon: 'bi-gear', color: 'text-blue-500' },
+  shipped: { label: 'Shipped', icon: 'bi-truck', color: 'text-indigo-500' },
+  delivered: { label: 'Delivered', icon: 'bi-check-circle', color: 'text-teal-500' },
+  cancelled: { label: 'Cancelled', icon: 'bi-x-circle', color: 'text-red-500' },
+};
+
+const getStepIndex = (status) => STATUS_STEPS.indexOf(status);
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+const Spinner = () => (
+  <div className="flex justify-center items-center min-h-[60vh]">
+    <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
+
+const CollapsibleCard = ({ icon, title, children }) => {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="border border-gray-200 rounded-xl mb-5 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex justify-between items-center p-5 bg-gray-50 hover:bg-gray-100 transition"
+      >
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <i className={`bi ${icon} text-teal-600`}></i>
+          {title}
+        </h3>
+        <i className={`bi bi-chevron-${open ? 'up' : 'down'} text-gray-500`}></i>
+      </button>
+      {open && (
+        <div className="p-5 border-t border-gray-100">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main component ───────────────────────────────────────────────────────────
 const OrderConfirmation = () => {
-  // State for collapsible cards (all open by default)
-  const [openShipping, setOpenShipping] = useState(true);
-  const [openPayment, setOpenPayment] = useState(true);
-  const [openItems, setOpenItems] = useState(true);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { fetchCart } = useCart();
 
-  // Mock order data
-  const order = {
-    id: '#ORD-935721',
-    date: 'March 2, 2025',
-    subtotal: 219.97,
-    shipping: 0.00,
-    tax: 18.70,
-    total: 238.67,
-    estimatedDelivery: 'March 7-9, 2025',
-    shippingMethod: 'Free Shipping',
-    customer: {
-      name: 'Michael Thompson',
-      address: '789 Oakwood Lane<br>Seattle, WA 98101<br>United States',
-      email: 'michael.t@example.com',
-      phone: '(206) 555-1234',
-    },
-    payment: {
-      type: 'American Express',
-      lastFour: '3782',
-    },
-    items: [
-      {
-        id: 1,
-        name: 'Wireless Bluetooth Speaker',
-        image: '/assets/img/product/product-7.webp',
-        color: 'Navy Blue',
-        quantity: 1,
-        price: 129.99,
-      },
-      {
-        id: 2,
-        name: 'Smart Fitness Tracker',
-        image: '/assets/img/product/product-9.webp',
-        color: 'Black',
-        size: 'Medium',
-        quantity: 1,
-        price: 89.98,
-      },
-    ],
-    recommended: [
-      { id: 1, name: 'Wireless Earbuds', price: 59.99, image: '/assets/img/product/product-11.webp' },
-      { id: 2, name: 'Portable Phone Charger', price: 34.99, image: '/assets/img/product/product-10.webp' },
-      { id: 3, name: 'Smart Watch', price: 149.99, image: '/assets/img/product/product-8.webp' },
-    ],
-  };
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Stepper steps
-  const steps = [
-    { name: 'Confirmed', completed: true },
-    { name: 'Processing', completed: true, current: true },
-    { name: 'Shipped', completed: false },
-    { name: 'Delivered', completed: false },
-  ];
+  // Redirect unauthenticated users
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate('/login');
+    }
+  }, []);
+
+  // Fetch order + refresh cart count (cart was cleared after checkout)
+  useEffect(() => {
+    if (!id) {
+      navigate('/');
+      return;
+    }
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data } = await getOrderDetail(id);
+        setOrder(data);
+        // Refresh cart badge (cart was cleared when order was placed)
+        fetchCart();
+      } catch (err) {
+        if (err.response?.status === 404) {
+          setError('Order not found.');
+        } else {
+          setError('Failed to load order details. Please try again.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id]);
+
+  if (loading) return <Spinner />;
+
+  if (error) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <i className="bi bi-exclamation-triangle text-6xl text-red-400 mb-4"></i>
+      <h2 className="text-2xl font-bold text-gray-700 mb-3">{error}</h2>
+      <div className="flex gap-3">
+        <button onClick={() => navigate(-1)} className="border border-gray-300 px-5 py-2 rounded-lg hover:bg-gray-50">
+          Go Back
+        </button>
+        <Link to="/account" className="bg-teal-600 text-white px-5 py-2 rounded-lg hover:bg-teal-700">
+          My Orders
+        </Link>
+      </div>
+    </div>
+  );
+
+  if (!order) return null;
+
+  // Derived values
+  const currentStep = getStepIndex(order.status);
+  const isCancelled = order.status === 'cancelled';
+  const statusMeta = STATUS_META[order.status] || STATUS_META.processing;
+
+  const orderDate = new Date(order.created_at).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  // Estimated delivery: 5-7 business days from order date
+  const deliveryBase = new Date(order.created_at);
+  deliveryBase.setDate(deliveryBase.getDate() + 5);
+  const deliveryEnd = new Date(order.created_at);
+  deliveryEnd.setDate(deliveryEnd.getDate() + 7);
+  const estimatedDelivery = `${deliveryBase.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${deliveryEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <>
@@ -72,226 +137,294 @@ const OrderConfirmation = () => {
             <ol className="flex gap-2">
               <li><Link to="/" className="text-teal-700 hover:underline">Home</Link></li>
               <li className="text-gray-500">/</li>
-              <li className="text-gray-600">Order Confirmation</li>
+              <li className="text-gray-600">Order #{order.order_number}</li>
             </ol>
           </nav>
         </div>
       </div>
 
-      {/* Order Confirmation Section */}
+      {/* Main Section */}
       <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row rounded-xl overflow-hidden shadow-lg border border-gray-100">
-            {/* Sidebar - Left */}
+
+            {/* ── Sidebar ────────────────────────────────────────────────── */}
             <div className="lg:w-1/3 bg-gradient-to-br from-teal-800 to-teal-900 text-white p-6 md:p-8">
-              {/* Success Animation */}
+
+              {/* Success / cancelled icon */}
               <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center relative">
-                  <div className="absolute w-24 h-24 rounded-full bg-white/10 animate-ping"></div>
-                  <i className="bi bi-check-lg text-4xl text-white"></i>
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center relative ${isCancelled ? 'bg-red-500/20' : 'bg-white/20'}`}>
+                  {!isCancelled && (
+                    <div className="absolute w-24 h-24 rounded-full bg-white/10 animate-ping"></div>
+                  )}
+                  <i className={`bi ${isCancelled ? 'bi-x-lg' : 'bi-check-lg'} text-4xl text-white`}></i>
                 </div>
               </div>
 
               {/* Order ID & Date */}
               <div className="text-center mb-8 pb-6 border-b border-white/20">
-                <h4 className="text-xl font-bold">{order.id}</h4>
-                <div className="text-white/80 text-sm mt-1">{order.date}</div>
-              </div>
-
-              {/* Stepper */}
-              <div className="mb-8">
-                <div className="space-y-4">
-                  {steps.map((step, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                          step.completed
-                            ? 'bg-teal-500 text-white'
-                            : step.current
-                            ? 'bg-white text-teal-800 ring-4 ring-white/30'
-                            : 'bg-white/20 text-white/70'
-                        }`}
-                      >
-                        {step.completed ? <i className="bi bi-check-lg text-xs"></i> : idx + 1}
-                      </div>
-                      <div className={`flex-1 ${step.current ? 'font-semibold' : 'text-white/70'}`}>
-                        {step.name}
-                      </div>
-                    </div>
-                  ))}
+                <h4 className="text-xl font-bold">#{order.order_number}</h4>
+                <div className="text-white/70 text-sm mt-1">{orderDate}</div>
+                <div className={`mt-2 inline-flex items-center gap-2 text-sm font-semibold ${statusMeta.color} bg-white/10 px-3 py-1 rounded-full`}>
+                  <i className={`bi ${statusMeta.icon}`}></i>
+                  {statusMeta.label}
                 </div>
               </div>
 
-              {/* Price Summary */}
+              {/* Order Progress Stepper (hidden if cancelled) */}
+              {!isCancelled && (
+                <div className="mb-8">
+                  <h5 className="text-base font-semibold mb-4">Order Progress</h5>
+                  <div className="space-y-4">
+                    {STATUS_STEPS.map((step, idx) => {
+                      const done = idx <= currentStep;
+                      const current = idx === currentStep;
+                      return (
+                        <div key={step} className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${done
+                                ? current
+                                  ? 'bg-white text-teal-800 ring-4 ring-white/30'
+                                  : 'bg-teal-500 text-white'
+                                : 'bg-white/20 text-white/50'
+                              }`}
+                          >
+                            {done && !current
+                              ? <i className="bi bi-check-lg text-xs"></i>
+                              : idx + 1
+                            }
+                          </div>
+                          <div className={`flex-1 text-sm ${current ? 'font-semibold' : done ? 'text-white/80' : 'text-white/40'}`}>
+                            {STATUS_META[step]?.label || step}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Financial Summary */}
               <div className="mb-8">
-                <h5 className="text-lg font-semibold mb-3">Order Summary</h5>
+                <h5 className="text-base font-semibold mb-3">Order Summary</h5>
                 <ul className="space-y-2 text-sm">
-                  <li className="flex justify-between"><span>Subtotal</span><span>${order.subtotal.toFixed(2)}</span></li>
-                  <li className="flex justify-between"><span>Shipping</span><span>${order.shipping.toFixed(2)}</span></li>
-                  <li className="flex justify-between"><span>Tax</span><span>${order.tax.toFixed(2)}</span></li>
+                  <li className="flex justify-between">
+                    <span className="text-white/70">Subtotal</span>
+                    <span>${Number(order.subtotal).toFixed(2)}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span className="text-white/70">Shipping</span>
+                    <span>${Number(order.shipping_cost).toFixed(2)}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span className="text-white/70">Tax</span>
+                    <span>${Number(order.tax).toFixed(2)}</span>
+                  </li>
+                  {Number(order.discount) > 0 && (
+                    <li className="flex justify-between text-teal-300">
+                      <span>Discount</span>
+                      <span>-${Number(order.discount).toFixed(2)}</span>
+                    </li>
+                  )}
                   <li className="flex justify-between text-lg font-bold pt-2 border-t border-white/20 mt-2">
-                    <span>Total</span><span>${order.total.toFixed(2)}</span>
+                    <span>Total</span>
+                    <span>${Number(order.total).toFixed(2)}</span>
                   </li>
                 </ul>
               </div>
 
               {/* Delivery Info */}
-              <div className="mb-8">
-                <h5 className="text-lg font-semibold mb-3">Delivery Information</h5>
-                <div className="space-y-2 text-sm">
-                  <p className="flex items-center gap-2"><i className="bi bi-calendar-check"></i> <span>Estimated delivery: {order.estimatedDelivery}</span></p>
-                  <p className="flex items-center gap-2"><i className="bi bi-truck"></i> <span>{order.shippingMethod}</span></p>
+              {!isCancelled && (
+                <div className="mb-8">
+                  <h5 className="text-base font-semibold mb-3">Delivery Information</h5>
+                  <div className="space-y-2 text-sm text-white/80">
+                    <p className="flex items-center gap-2">
+                      <i className="bi bi-calendar-check flex-shrink-0"></i>
+                      Estimated: {estimatedDelivery}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <i className="bi bi-truck flex-shrink-0"></i>
+                      Standard Shipping
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Customer Service */}
+              {/* Help Links */}
               <div>
-                <h5 className="text-lg font-semibold mb-3">Need Help?</h5>
-                <div className="space-y-2">
-                  <Link to="/contact" className="flex items-center gap-2 text-white/80 hover:text-white transition">
-                    <i className="bi bi-chat-dots"></i> <span>Contact Support</span>
+                <h5 className="text-base font-semibold mb-3">Need Help?</h5>
+                <div className="space-y-2 text-sm">
+                  <Link to="/contact" className="flex items-center gap-2 text-white/70 hover:text-white transition">
+                    <i className="bi bi-chat-dots"></i> Contact Support
                   </Link>
-                  <Link to="/faq" className="flex items-center gap-2 text-white/80 hover:text-white transition">
-                    <i className="bi bi-question-circle"></i> <span>FAQs</span>
+                  <Link to="/faq" className="flex items-center gap-2 text-white/70 hover:text-white transition">
+                    <i className="bi bi-question-circle"></i> FAQs
                   </Link>
                 </div>
               </div>
             </div>
 
-            {/* Main Content - Right */}
+            {/* ── Main Content ────────────────────────────────────────────── */}
             <div className="lg:w-2/3 p-6 md:p-8 bg-white">
-              {/* Thank You Message */}
+
+              {/* Thank You / Cancelled header */}
               <div className="mb-8">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Thanks for your order!</h1>
-                <p className="text-gray-600 mt-2">
-                  We've received your order and will begin processing it right away.
-                  We'll send you updates via email as your order progresses.
-                </p>
-              </div>
-
-              {/* Shipping Details Card */}
-              <div className="border border-gray-200 rounded-xl mb-5 overflow-hidden">
-                <button
-                  onClick={() => setOpenShipping(!openShipping)}
-                  className="w-full flex justify-between items-center p-5 bg-gray-50 hover:bg-gray-100 transition"
-                >
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <i className="bi bi-geo-alt text-teal-600"></i> Shipping Details
-                  </h3>
-                  <i className={`bi bi-chevron-${openShipping ? 'up' : 'down'} text-gray-500 transition-transform`}></i>
-                </button>
-                {openShipping && (
-                  <div className="p-5 border-t border-gray-100">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 mb-1">Ship To</label>
-                        <address className="not-italic text-gray-700" dangerouslySetInnerHTML={{ __html: order.customer.address }} />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 mb-1">Contact</label>
-                        <div className="space-y-1">
-                          <p><i className="bi bi-envelope mr-2 text-gray-400"></i> {order.customer.email}</p>
-                          <p><i className="bi bi-telephone mr-2 text-gray-400"></i> {order.customer.phone}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                {isCancelled ? (
+                  <>
+                    <h1 className="text-2xl md:text-3xl font-bold text-red-600">Order Cancelled</h1>
+                    <p className="text-gray-600 mt-2">
+                      Your order has been cancelled. If you were charged, a refund will be processed within 5–7 business days.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+                      Thanks for your order, {order.first_name}!
+                    </h1>
+                    <p className="text-gray-600 mt-2">
+                      We've received your order and will begin processing it right away.
+                      Confirmation details will be sent to <strong>{order.email}</strong>.
+                    </p>
+                  </>
                 )}
               </div>
 
-              {/* Payment Details Card */}
-              <div className="border border-gray-200 rounded-xl mb-5 overflow-hidden">
-                <button
-                  onClick={() => setOpenPayment(!openPayment)}
-                  className="w-full flex justify-between items-center p-5 bg-gray-50 hover:bg-gray-100 transition"
-                >
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <i className="bi bi-credit-card text-teal-600"></i> Payment Details
-                  </h3>
-                  <i className={`bi bi-chevron-${openPayment ? 'up' : 'down'} text-gray-500 transition-transform`}></i>
-                </button>
-                {openPayment && (
-                  <div className="p-5 border-t border-gray-100">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-                        <i className="bi bi-credit-card-2-front text-teal-600 text-2xl"></i>
-                      </div>
-                      <div>
-                        <div className="font-semibold">{order.payment.type}</div>
-                        <div className="text-gray-600 text-sm">•••• •••• •••• {order.payment.lastFour}</div>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                      <h5 className="font-medium">Billing Address</h5>
-                      <p className="text-gray-600 text-sm mt-1">Same as shipping address</p>
-                    </div>
+              {/* Shipping Details */}
+              <CollapsibleCard icon="bi-geo-alt" title="Shipping Details">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ship To</p>
+                    <address className="not-italic text-gray-700 text-sm leading-relaxed">
+                      <strong>{order.full_name}</strong><br />
+                      {order.shipping_address}
+                      {order.shipping_apartment && <>, {order.shipping_apartment}</>}<br />
+                      {order.shipping_city}, {order.shipping_state} {order.shipping_zip}<br />
+                      {order.shipping_country}
+                    </address>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Contact</p>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p><i className="bi bi-envelope me-2 text-gray-400"></i>{order.email}</p>
+                      <p><i className="bi bi-telephone me-2 text-gray-400"></i>{order.phone}</p>
+                    </div>
+                    {order.notes && (
+                      <div className="mt-4">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Notes</p>
+                        <p className="text-sm text-gray-600 italic">{order.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CollapsibleCard>
 
-              {/* Order Items Card */}
-              <div className="border border-gray-200 rounded-xl mb-8 overflow-hidden">
-                <button
-                  onClick={() => setOpenItems(!openItems)}
-                  className="w-full flex justify-between items-center p-5 bg-gray-50 hover:bg-gray-100 transition"
-                >
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <i className="bi bi-bag-check text-teal-600"></i> Order Items
-                  </h3>
-                  <i className={`bi bi-chevron-${openItems ? 'up' : 'down'} text-gray-500 transition-transform`}></i>
-                </button>
-                {openItems && (
-                  <div className="p-5 border-t border-gray-100 space-y-5">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
-                        <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-lg border" />
-                        <div className="flex-1">
-                          <h4 className="font-semibold">{item.name}</h4>
-                          <div className="text-sm text-gray-500 mt-1">
-                            {item.color && <span>Color: {item.color}</span>}
-                            {item.size && <span className="ml-2">Size: {item.size}</span>}
+              {/* Payment Details */}
+              <CollapsibleCard icon="bi-credit-card" title="Payment Details">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i className={`bi ${order.payment_method === 'paypal' ? 'bi-paypal' :
+                        order.payment_method === 'apple_pay' ? 'bi-apple' :
+                          'bi-credit-card-2-front'
+                      } text-teal-600 text-2xl`}></i>
+                  </div>
+                  <div>
+                    <div className="font-semibold">{order.payment_display}</div>
+                    {order.card_last_four && (
+                      <div className="text-gray-500 text-sm">
+                        •••• •••• •••• {order.card_last_four}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <p className="text-sm text-gray-500">
+                    Billing address:{' '}
+                    {order.billing_same_as_shipping
+                      ? 'Same as shipping address'
+                      : 'Separate billing address on file'}
+                  </p>
+                </div>
+              </CollapsibleCard>
+
+              {/* Order Items */}
+              <CollapsibleCard icon="bi-bag-check" title={`Order Items (${order.items.length})`}>
+                <div className="space-y-5">
+                  {order.items.map((item) => (
+                    <div key={item.id} className="flex gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                      <div className="w-20 h-20 rounded-lg border bg-gray-100 flex-shrink-0 overflow-hidden">
+                        {item.product_image ? (
+                          <img
+                            src={item.product_image}
+                            alt={item.product_name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-300">
+                            <i className="bi bi-image text-2xl"></i>
                           </div>
-                          <div className="flex justify-between mt-2">
-                            <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
-                            <span className="font-medium">${item.price.toFixed(2)}</span>
-                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold line-clamp-2">
+                          {item.product_slug ? (
+                            <Link
+                              to={`/product/${item.product_slug}`}
+                              className="hover:text-teal-600 transition"
+                            >
+                              {item.product_name}
+                            </Link>
+                          ) : item.product_name}
+                        </h4>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-sm text-gray-500">
+                            {item.quantity} × ${Number(item.unit_price).toFixed(2)}
+                          </span>
+                          <span className="font-semibold text-gray-800">
+                            ${Number(item.subtotal).toFixed(2)}
+                          </span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="grid md:grid-cols-2 gap-4 mb-10">
-                <Link to="/category" className="flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition">
-                  <i className="bi bi-arrow-left"></i> Return to Shop
-                </Link>
-                <Link to="/account" className="flex items-center justify-center gap-2 bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition">
-                  View in Account <i className="bi bi-arrow-right"></i>
-                </Link>
-              </div>
-
-              {/* Recommended Products */}
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-5 relative inline-block after:content-[''] after:absolute after:bottom-[-8px] after:left-0 after:w-12 after:h-1 after:bg-teal-600">
-                  You Might Also Like
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-                  {order.recommended.map((product) => (
-                    <div key={product.id} className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition group">
-                      <div className="h-40 overflow-hidden">
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                      </div>
-                      <div className="p-3 text-center">
-                        <h5 className="font-medium text-sm line-clamp-2">{product.name}</h5>
-                        <div className="text-teal-600 font-bold text-sm mt-1">${product.price.toFixed(2)}</div>
-                        <button className="mt-2 w-full bg-teal-50 text-teal-600 py-1.5 rounded-lg text-xs font-semibold hover:bg-teal-600 hover:text-white transition">
-                          <i className="bi bi-plus"></i> Add to Cart
-                        </button>
                       </div>
                     </div>
                   ))}
+                </div>
+              </CollapsibleCard>
+
+              {/* Action Buttons */}
+              <div className="grid md:grid-cols-2 gap-4 mb-10">
+                <Link
+                  to="/category"
+                  className="flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-xl hover:bg-gray-50 transition"
+                >
+                  <i className="bi bi-arrow-left"></i> Return to Shop
+                </Link>
+                <Link
+                  to="/account?tab=orders"
+                  className="flex items-center justify-center gap-2 bg-teal-600 text-white py-3 rounded-xl hover:bg-teal-700 transition"
+                >
+                  View All Orders <i className="bi bi-arrow-right"></i>
+                </Link>
+              </div>
+
+              {/* Recommended — static suggestions since we don't have a "related to order" API */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-5 pb-2 border-b border-gray-100">
+                  Continue Shopping
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <Link
+                    to="/category"
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center hover:shadow-md hover:border-teal-300 transition group"
+                  >
+                    <i className="bi bi-grid text-3xl text-teal-600 block mb-2 group-hover:scale-110 transition"></i>
+                    <span className="font-medium text-gray-700">Browse All Products</span>
+                  </Link>
+                  <Link
+                    to="/account?tab=orders"
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center hover:shadow-md hover:border-teal-300 transition group"
+                  >
+                    <i className="bi bi-bag-heart text-3xl text-teal-600 block mb-2 group-hover:scale-110 transition"></i>
+                    <span className="font-medium text-gray-700">Track My Orders</span>
+                  </Link>
                 </div>
               </div>
             </div>

@@ -202,4 +202,33 @@ export const removeCartItem = (itemId) =>
 export const clearCart = () =>
   api.delete('/cart/clear/');
 
+// ─── Order API calls ───────────────────────────────────────────────────────
+
+/**
+ * Place a new order from the user's current cart.
+ * @param {Object} payload  – checkout form data (see OrderCreateSerializer)
+ */
+export const createOrder = (payload) =>
+  api.post('/orders/', payload);
+
+/**
+ * List all orders belonging to the authenticated user.
+ */
+export const getOrders = () =>
+  api.get('/orders/');
+
+/**
+ * Retrieve full detail for a single order.
+ * @param {number} orderId
+ */
+export const getOrderDetail = (orderId) =>
+  api.get(`/orders/${orderId}/`);
+
+/**
+ * Cancel an order (only allowed before it ships).
+ * @param {number} orderId
+ */
+export const cancelOrder = (orderId) =>
+  api.patch(`/orders/${orderId}/`, { status: 'cancelled' });
+
 export default api;

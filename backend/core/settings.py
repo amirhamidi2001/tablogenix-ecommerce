@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "contact.apps.ContactConfig",
     "shop.apps.ShopConfig",
-    "cart.apps.CartConfig",  # ← NEW
+    "cart.apps.CartConfig",
+    "order.apps.OrderConfig",
 ]
 
 MIDDLEWARE = [
@@ -190,7 +191,7 @@ else:
     EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
     DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER")
 
-FRONTEND_URL = "http://localhost:5173"
+FRONTEND_URL = "http://localhost:3000"
 
 # ─── CORS ──────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = [
