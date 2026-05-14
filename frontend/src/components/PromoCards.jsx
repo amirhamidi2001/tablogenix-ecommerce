@@ -5,10 +5,10 @@ import { getCategories, getProducts } from '../services/api';
 
 // ─── Static palette assigned per category index ───────────────────────────────
 const CARD_THEMES = [
-  { bg: 'bg-blue-50',   accent: 'text-blue-700',  hover: 'group-hover:text-blue-800' },
+  { bg: 'bg-blue-50', accent: 'text-blue-700', hover: 'group-hover:text-blue-800' },
   { bg: 'bg-yellow-50', accent: 'text-yellow-700', hover: 'group-hover:text-yellow-800' },
-  { bg: 'bg-pink-50',   accent: 'text-pink-700',   hover: 'group-hover:text-pink-800' },
-  { bg: 'bg-teal-50',   accent: 'text-teal-700',   hover: 'group-hover:text-teal-800' },
+  { bg: 'bg-pink-50', accent: 'text-pink-700', hover: 'group-hover:text-pink-800' },
+  { bg: 'bg-teal-50', accent: 'text-teal-700', hover: 'group-hover:text-teal-800' },
   { bg: 'bg-purple-50', accent: 'text-purple-700', hover: 'group-hover:text-purple-800' },
   { bg: 'bg-orange-50', accent: 'text-orange-700', hover: 'group-hover:text-orange-800' },
 ];
@@ -69,36 +69,50 @@ const SmallCategoryCard = ({ category, productCount, imgSrc, theme }) => (
 
 // ─── PromoCards section ───────────────────────────────────────────────────────
 const PromoCards = () => {
-  const [categories, setCategories]     = useState([]);
+  const [categories, setCategories] = useState([]);
   const [productCounts, setProductCounts] = useState({});   // { [categorySlug]: count }
   const [heroCategory, setHeroCategory] = useState(null);
-  const [heroCount, setHeroCount]       = useState(null);
-  const [loading, setLoading]           = useState(true);
+  const [heroCount, setHeroCount] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // ── Step 1: fetch top-level categories ──────────────────────────────────
   useEffect(() => {
     getCategories()
       .then((res) => {
-        const cats = res.data || [];
-        // Use root categories only, take up to 5 for the small grid
-        const smallCats = cats.slice(1, 5);   // 4 small cards
-        const heroCat   = cats[0] || null;    // first category → hero card
+        const cats = Array.isArray(res.data)
+          ? res.data
+          : res.data.results || [];
+
+        const smallCats = cats.slice(1, 5);
+        const heroCat = cats[0] || null;
 
         setCategories(smallCats);
         setHeroCategory(heroCat);
 
-        // ── Step 2: fetch product counts for each displayed category ─────
         const countRequests = [...(heroCat ? [heroCat] : []), ...smallCats].map((cat) =>
           getProducts({ category: cat.slug, page_size: 1 })
-            .then((r) => ({ slug: cat.slug, count: r.data.count || 0 }))
-            .catch(() => ({ slug: cat.slug, count: 0 }))
+            .then((r) => ({
+              slug: cat.slug,
+              count: r.data.count || 0
+            }))
+            .catch(() => ({
+              slug: cat.slug,
+              count: 0
+            }))
         );
 
         Promise.all(countRequests).then((results) => {
           const map = {};
-          results.forEach(({ slug, count }) => { map[slug] = count; });
+
+          results.forEach(({ slug, count }) => {
+            map[slug] = count;
+          });
+
           setProductCounts(map);
-          if (heroCat) setHeroCount(map[heroCat.slug] ?? 0);
+
+          if (heroCat) {
+            setHeroCount(map[heroCat.slug] ?? 0);
+          }
         });
       })
       .catch((err) => console.error('PromoCards category fetch error:', err))
@@ -209,7 +223,7 @@ const PromoCards = () => {
             {loading
               ? [...Array(4)].map((_, i) => <SmallCardSkeleton key={i} />)
               : categories.length > 0
-              ? categories.map((cat, idx) => (
+                ? categories.map((cat, idx) => (
                   <SmallCategoryCard
                     key={cat.id}
                     category={cat}
@@ -218,12 +232,12 @@ const PromoCards = () => {
                     theme={CARD_THEMES[(idx + 1) % CARD_THEMES.length]}
                   />
                 ))
-              : /* Static fallback cards */
+                : /* Static fallback cards */
                 [
-                  { name: "Men's Wear",      img: '/assets/img/product/product-m-5.webp',  slug: 'mens-wear',      theme: CARD_THEMES[0] },
-                  { name: "Kid's Fashion",   img: '/assets/img/product/product-8.webp',    slug: 'kids-fashion',   theme: CARD_THEMES[1] },
-                  { name: 'Beauty Products', img: '/assets/img/product/product-f-2.webp',  slug: 'beauty-products',theme: CARD_THEMES[2] },
-                  { name: 'Accessories',     img: '/assets/img/product/product-12.webp',   slug: 'accessories',    theme: CARD_THEMES[3] },
+                  { name: "Men's Wear", img: '/assets/img/product/product-m-5.webp', slug: 'mens-wear', theme: CARD_THEMES[0] },
+                  { name: "Kid's Fashion", img: '/assets/img/product/product-8.webp', slug: 'kids-fashion', theme: CARD_THEMES[1] },
+                  { name: 'Beauty Products', img: '/assets/img/product/product-f-2.webp', slug: 'beauty-products', theme: CARD_THEMES[2] },
+                  { name: 'Accessories', img: '/assets/img/product/product-12.webp', slug: 'accessories', theme: CARD_THEMES[3] },
                 ].map((item) => (
                   <div key={item.slug} className={`relative ${item.theme.bg} rounded-2xl overflow-hidden group h-56`}>
                     <div className="absolute right-0 top-0 w-1/2 h-full">

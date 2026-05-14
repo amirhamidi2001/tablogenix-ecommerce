@@ -111,8 +111,8 @@ class LoginView(TokenObtainPairView):
 
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
-    GET  /api/accounts/profile/   → return logged-in user's profile
-    PATCH /api/accounts/profile/  → update first_name, last_name, phone_number,
+    GET  /api/auth/profile/   → return logged-in user's profile
+    PATCH /api/auth/profile/  → update first_name, last_name, phone_number,
                                     order_updates, promotions, newsletter
     """
 

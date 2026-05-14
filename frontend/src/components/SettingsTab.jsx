@@ -79,7 +79,7 @@ const SettingsTab = () => {
     setProfileLoading(true);
     setProfileFetchError('');
     try {
-      const { data } = await api.get('/accounts/profile/');
+      const { data } = await api.get('/auth/profile/');
       setProfile({
         email:         data.email         ?? '',
         first_name:    data.first_name    ?? '',
@@ -105,7 +105,7 @@ const SettingsTab = () => {
     setInfoAlert(null);
     setInfoLoading(true);
     try {
-      await api.patch('/accounts/profile/', {
+      await api.patch('/auth/profile/', {
         first_name:   profile.first_name,
         last_name:    profile.last_name,
         phone_number: profile.phone_number,
@@ -125,7 +125,7 @@ const SettingsTab = () => {
     setPrefAlert(null);
     setPrefLoading(true);
     try {
-      await api.patch('/accounts/profile/', {
+      await api.patch('/auth/profile/', {
         order_updates: updated.order_updates,
         promotions:    updated.promotions,
         newsletter:    updated.newsletter,

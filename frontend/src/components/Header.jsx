@@ -22,7 +22,7 @@ const Header = () => {
     }
 
     try {
-      const response = await api.get('/accounts/profile/');
+      const response = await api.get('/auth/profile/');
       const profile = response.data;
       setIsAuthenticated(true);
       const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
