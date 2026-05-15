@@ -204,7 +204,7 @@ const OrdersTab = () => {
     {
       id: '#ORD-2024-1252',
       date: 'Feb 10, 2025',
-      products: ['/assets/img/product/product-6.webp'],
+      products: ['/assets/img/product/product-1.webp'],
       moreCount: 0,
       status: 'delivered',
       itemCount: 1,
@@ -216,14 +216,14 @@ const OrdersTab = () => {
       tax: '$0.00',
       address: 'Sarah Anderson<br>123 Main Street, Apt 4B<br>New York, NY 10001',
       orderItems: [
-        { name: 'Wireless Earbuds', sku: 'PRD-006', qty: 1, price: '$129.99', image: '/assets/img/product/product-6.webp' },
+        { name: 'Wireless Earbuds', sku: 'PRD-006', qty: 1, price: '$129.99', image: '/assets/img/product/product-1.webp' },
       ],
       tracking: [],
     },
     {
       id: '#ORD-2024-1245',
       date: 'Feb 5, 2025',
-      products: ['/assets/img/product/product-7.webp', '/assets/img/product/product-8.webp', '/assets/img/product/product-9.webp'],
+      products: ['/assets/img/product/product-1.webp', '/assets/img/product/product-1.webp', '/assets/img/product/product-1.webp'],
       moreCount: 2,
       status: 'cancelled',
       itemCount: 5,

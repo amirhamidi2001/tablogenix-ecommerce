@@ -15,12 +15,12 @@ const CARD_THEMES = [
 
 // ─── Fallback images per index when category has no image ────────────────────
 const FALLBACK_IMAGES = [
-  '/assets/img/product/product-m-5.webp',
-  '/assets/img/product/product-8.webp',
-  '/assets/img/product/product-f-2.webp',
-  '/assets/img/product/product-12.webp',
+  '/assets/img/product/product-1.webp',
+  '/assets/img/product/product-2.webp',
   '/assets/img/product/product-3.webp',
-  '/assets/img/product/product-7.webp',
+  '/assets/img/product/product-4.webp',
+  '/assets/img/product/product-5.webp',
+  '/assets/img/product/product-1.webp',
 ];
 
 // ─── Skeleton for small category card ────────────────────────────────────────
@@ -234,10 +234,10 @@ const PromoCards = () => {
                 ))
                 : /* Static fallback cards */
                 [
-                  { name: "Men's Wear", img: '/assets/img/product/product-m-5.webp', slug: 'mens-wear', theme: CARD_THEMES[0] },
-                  { name: "Kid's Fashion", img: '/assets/img/product/product-8.webp', slug: 'kids-fashion', theme: CARD_THEMES[1] },
-                  { name: 'Beauty Products', img: '/assets/img/product/product-f-2.webp', slug: 'beauty-products', theme: CARD_THEMES[2] },
-                  { name: 'Accessories', img: '/assets/img/product/product-12.webp', slug: 'accessories', theme: CARD_THEMES[3] },
+                  { name: "Men's Wear", img: '/assets/img/product/product-4.webp', slug: 'mens-wear', theme: CARD_THEMES[0] },
+                  { name: "Kid's Fashion", img: '/assets/img/product/product-3.webp', slug: 'kids-fashion', theme: CARD_THEMES[1] },
+                  { name: 'Beauty Products', img: '/assets/img/product/product-2.webp', slug: 'beauty-products', theme: CARD_THEMES[2] },
+                  { name: 'Accessories', img: '/assets/img/product/product-1.webp', slug: 'accessories', theme: CARD_THEMES[3] },
                 ].map((item) => (
                   <div key={item.slug} className={`relative ${item.theme.bg} rounded-2xl overflow-hidden group h-56`}>
                     <div className="absolute right-0 top-0 w-1/2 h-full">

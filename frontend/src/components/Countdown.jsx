@@ -38,7 +38,7 @@ const TimeBox = ({ value, label }) => (
 
 // ─── Sale product card (compact) ─────────────────────────────────────────────
 const SaleCard = ({ product }) => {
-  const img = product.thumbnail_url || '/assets/img/product/product-m-5.webp';
+  const img = product.thumbnail_url || '/assets/img/product/product-5.webp';
   const full = Math.floor(Number(product.rating));
   const half = Number(product.rating) % 1 >= 0.5;
 
@@ -52,7 +52,7 @@ const SaleCard = ({ product }) => {
           src={img}
           alt={product.name}
           className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
-          onError={(e) => { e.target.src = '/assets/img/product/product-m-5.webp'; }}
+          onError={(e) => { e.target.src = '/assets/img/product/product-5.webp'; }}
         />
         {product.discount_percent > 0 && (
           <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">

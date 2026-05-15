@@ -39,7 +39,7 @@ const SkeletonRow = () => (
 
 // ─── Single mini product row ─────────────────────────────────────────────────
 const ProductRow = ({ product }) => {
-  const img = product.thumbnail_url || '/assets/img/product/product-8.webp';
+  const img = product.thumbnail_url || '/assets/img/product/product-1.webp';
   return (
     <div className="flex gap-3 items-center group">
       <Link
@@ -50,7 +50,7 @@ const ProductRow = ({ product }) => {
           src={img}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-          onError={(e) => { e.target.src = '/assets/img/product/product-8.webp'; }}
+          onError={(e) => { e.target.src = '/assets/img/product/product-1.webp'; }}
         />
       </Link>
       <div className="flex-1 min-w-0">
