@@ -1,10 +1,28 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+
+// ─── Context providers ────────────────────────────────────────────────────
+import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
+// ─── Shared layout pieces ─────────────────────────────────────────────────
 import Header from './components/Header';
 import Footer from './components/Footer';
 
+// ─── Admin layout ─────────────────────────────────────────────────────────
+import AdminLayout from './components/admin/AdminLayout';
+
+// ─── Admin pages ──────────────────────────────────────────────────────────
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminProducts from './pages/admin/AdminProducts';
+import AdminCategories from './pages/admin/AdminCategories';
+import AdminBrands from './pages/admin/AdminBrands';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminReviews from './pages/admin/AdminReviews';
+import AdminMessages from './pages/admin/AdminMessages';
+
+// ─── Existing pages (unchanged) ───────────────────────────────────────────
 import Home from './pages/Home';
 import About from './pages/About';
 import Account from './pages/Account';
@@ -30,44 +48,148 @@ import ShippingInfo from './pages/ShippingInfo';
 import Support from './pages/Support';
 import Tos from './pages/Tos';
 
+// ─── Auth hook ────────────────────────────────────────────────────────────
+import { useAuth } from './context/AuthContext';
+
+// ═════════════════════════════════════════════════════════════════════════
+// Layout wrappers
+// ═════════════════════════════════════════════════════════════════════════
+
+/**
+ * MainLayout — renders the shared Header + Footer around every non-admin page.
+ * Admin pages use AdminLayout (their own full-screen sidebar shell) and must
+ * NOT render the storefront Header/Footer.
+ */
+const MainLayout = () => (
+  <>
+    <Header />
+    <main className="min-h-screen">
+      <Outlet />
+    </main>
+    <Footer />
+  </>
+);
+
+// ═════════════════════════════════════════════════════════════════════════
+// Route guards
+// ═════════════════════════════════════════════════════════════════════════
+
+/**
+ * ProtectedRoute — authentication required.
+ * Redirects unauthenticated users to /login.
+ */
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+/**
+ * AdminRoute — authentication + admin/superuser type required (type 2 or 3).
+ * Regular customers are redirected to /account.
+ */
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/account" replace />;
+  return children;
+};
+
+/**
+ * GuestRoute — prevents already-authenticated users from seeing auth pages.
+ * Redirects them to /account instead.
+ */
+const GuestRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  return isAuthenticated ? <Navigate to="/account" replace /> : children;
+};
+
+// ═════════════════════════════════════════════════════════════════════════
+// App
+// ═════════════════════════════════════════════════════════════════════════
 function App() {
   return (
     <BrowserRouter>
-      <CartProvider>
-        <Header />
-
-        <main className="min-h-screen">
+      <AuthProvider>
+        <CartProvider>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/category" element={<Category />} />
-            <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/confirm-email" element={<ConfirmEmail />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/faq" element={<Faq />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
-            <Route path="/payment-methods" element={<PaymentMethods />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/product-details" element={<ProductDetails />} />
-            <Route path="/product/:slug" element={<ProductDetails />} />
-            <Route path="/product-lists" element={<ProductLists />} />
-            <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
-            <Route path="/return-policy" element={<ReturnPolicy />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/shipping-info" element={<ShippingInfo />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/tos" element={<Tos />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
 
-        <Footer />
-      </CartProvider>
+            {/* ── Storefront routes (Header + Footer via MainLayout) ──────── */}
+            <Route element={<MainLayout />}>
+
+              {/* Public */}
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/category" element={<Category />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/faq" element={<Faq />} />
+              <Route path="/payment-methods" element={<PaymentMethods />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/product-details" element={<ProductDetails />} />
+              <Route path="/product/:slug" element={<ProductDetails />} />
+              <Route path="/product-lists" element={<ProductLists />} />
+              <Route path="/return-policy" element={<ReturnPolicy />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/shipping-info" element={<ShippingInfo />} />
+              <Route path="/support" element={<Support />} />
+              <Route path="/tos" element={<Tos />} />
+
+              {/* Guest-only (redirect to /account when logged in) */}
+              <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+              <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+              <Route path="/reset-password/:uid/:token" element={<GuestRoute><ResetPassword /></GuestRoute>} />
+              <Route path="/confirm-email" element={<GuestRoute><ConfirmEmail /></GuestRoute>} />
+
+              {/* Auth-required */}
+              <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+              <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
+              <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+              <Route path="/order-confirmation/:id" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
+
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+
+            {/* ── Admin routes (AdminLayout — no storefront Header/Footer) ─ */}
+            <Route
+              path="/admin"
+              element={<AdminRoute><AdminLayout /></AdminRoute>}
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="categories" element={<AdminCategories />} />
+              <Route path="brands" element={<AdminBrands />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="reviews" element={<AdminReviews />} />
+              <Route path="messages" element={<AdminMessages />} />
+              {/* Unknown /admin/* → back to overview */}
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+            </Route>
+
+          </Routes>
+        </CartProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

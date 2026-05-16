@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import api, { setTokens, parseErrors } from '../services/api';
+import { setTokens, parseErrors } from '../services/api';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Reusable micro-components ─────────────────────────────────────────────
 const FieldError = ({ msg }) =>
@@ -46,26 +48,32 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const [activeForm, setActiveForm] = useState('login');
 
+  // ── FIX: pull login + hydrateUser from AuthContext ──────────────────────
+  // login()       → POST /auth/login/ + GET /auth/user/ + setUser()
+  // hydrateUser() → GET /auth/user/ + setUser()  (used after register)
+  const { login, hydrateUser } = useAuth();
+
   useEffect(() => {
     setActiveForm(searchParams.get('mode') === 'register' ? 'register' : 'login');
   }, [searchParams]);
 
   // ── Login ────────────────────────────────────────────────────────────────
-  const [loginData, setLoginData]       = useState({ email: '', password: '', remember: false });
-  const [loginErrors, setLoginErrors]   = useState({});
+  const [loginData, setLoginData] = useState({ email: '', password: '', remember: false });
+  const [loginErrors, setLoginErrors] = useState({});
   const [loginLoading, setLoginLoading] = useState(false);
-  const [showLoginPw, setShowLoginPw]   = useState(false);
+  const [showLoginPw, setShowLoginPw] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginErrors({});
     setLoginLoading(true);
     try {
-      const { data } = await api.post('/auth/login/', {
+      // FIX: use context login() — it stores tokens AND sets AuthContext.user
+      // before we navigate, so ProtectedRoute sees isAuthenticated = true.
+      await login({
         email: loginData.email,
         password: loginData.password,
       });
-      setTokens({ access: data.access, refresh: data.refresh });
       navigate('/account');
     } catch (err) {
       const errors = parseErrors(err);
@@ -82,10 +90,10 @@ const Login = () => {
   const [regData, setRegData] = useState({
     firstName: '', lastName: '', email: '', password: '', confirmPassword: '', terms: false,
   });
-  const [regErrors, setRegErrors]         = useState({});
-  const [regLoading, setRegLoading]       = useState(false);
-  const [showRegPw, setShowRegPw]         = useState(false);
-  const [showRegConf, setShowRegConf]     = useState(false);
+  const [regErrors, setRegErrors] = useState({});
+  const [regLoading, setRegLoading] = useState(false);
+  const [showRegPw, setShowRegPw] = useState(false);
+  const [showRegConf, setShowRegConf] = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -102,13 +110,21 @@ const Login = () => {
 
     setRegLoading(true);
     try {
+      // Step 1 — create the account; response includes access + refresh tokens
       const { data } = await api.post('/auth/register/', {
-        email:      regData.email,
+        email: regData.email,
         first_name: regData.firstName,
-        last_name:  regData.lastName,
-        password:   regData.password,
+        last_name: regData.lastName,
+        password: regData.password,
       });
+
+      // Step 2 — persist the tokens so the Axios interceptor can attach them
       setTokens({ access: data.access, refresh: data.refresh });
+
+      // FIX: Step 3 — hydrate AuthContext.user via GET /auth/user/
+      // Without this, user stays null → isAuthenticated false → redirect loop.
+      await hydrateUser();
+
       navigate('/account');
     } catch (err) {
       setRegErrors(parseErrors(err));
@@ -243,7 +259,7 @@ const Login = () => {
                     <div className="flex flex-col sm:flex-row gap-3 mb-4">
                       {[
                         { field: 'firstName', label: 'First name', errorKey: 'first_name', auto: 'given-name' },
-                        { field: 'lastName',  label: 'Last name',  errorKey: 'last_name',  auto: 'family-name' },
+                        { field: 'lastName', label: 'Last name', errorKey: 'last_name', auto: 'family-name' },
                       ].map(({ field, label, errorKey, auto }) => (
                         <div key={field} className="relative flex-1">
                           <i className="bi bi-person absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />

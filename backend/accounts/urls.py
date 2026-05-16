@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     ChangePasswordView,
+    CurrentUserView,
     LoginView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -14,6 +15,10 @@ urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    # ← NEW — resolves GET /api/auth/user/ called by AuthContext
+    path("user/", CurrentUserView.as_view(), name="current-user"),
+    path("profile/", ProfileView.as_view(), name="profile"),
+    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path(
         "password-reset/",
         PasswordResetRequestView.as_view(),
@@ -23,11 +28,5 @@ urlpatterns = [
         "password-reset/confirm/",
         PasswordResetConfirmView.as_view(),
         name="password-reset-confirm",
-    ),
-    path("profile/", ProfileView.as_view(), name="profile"),
-    path(
-        "change-password/",
-        ChangePasswordView.as_view(),
-        name="change-password",
     ),
 ]

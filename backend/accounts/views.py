@@ -13,6 +13,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import (
     ChangePasswordSerializer,
+    CurrentUserSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     ProfileSerializer,
@@ -27,7 +28,7 @@ def _send_welcome_email(user):
     """Send a welcome email to a newly registered user."""
     subject = "Welcome! Your account is ready."
     message = render_to_string(
-        "accounts/emails/welcome.html",  # optional HTML template
+        "accounts/emails/welcome.html",
         {
             "first_name": user.profile.first_name,
             "email": user.email,
@@ -70,6 +71,9 @@ def _send_password_reset_email(user, request):
     )
 
 
+# ─── Register ─────────────────────────────────────────────────────────────────
+
+
 class RegisterView(APIView):
     """
     Body: { email, first_name, last_name, password }
@@ -100,6 +104,9 @@ class RegisterView(APIView):
         )
 
 
+# ─── Login ────────────────────────────────────────────────────────────────────
+
+
 class LoginView(TokenObtainPairView):
     """
     Body: { email, password }
@@ -107,6 +114,41 @@ class LoginView(TokenObtainPairView):
     """
 
     permission_classes = [AllowAny]
+
+
+# ─── Current user  ←  NEW  ───────────────────────────────────────────────────
+
+
+class CurrentUserView(APIView):
+    """
+    GET /api/auth/user/
+
+    Returns the authenticated user's core fields.
+    Called by AuthContext on every mount (token re-hydration) and
+    immediately after login to populate the React user state.
+
+    Response shape:
+    {
+        "id": 1,
+        "email": "user@example.com",
+        "type": 1,            ← AuthContext uses this for isAdmin check
+        "is_verified": true,
+        "is_active": true,
+        "is_staff": false,
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "avatar_url": "http://…/media/profiles/jane.webp"
+    }
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = CurrentUserSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
+
+
+# ─── Profile ──────────────────────────────────────────────────────────────────
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
@@ -122,6 +164,9 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user.profile
+
+
+# ─── Change password ──────────────────────────────────────────────────────────
 
 
 class ChangePasswordView(APIView):
@@ -142,6 +187,9 @@ class ChangePasswordView(APIView):
             {"detail": "Password updated successfully."},
             status=status.HTTP_200_OK,
         )
+
+
+# ─── Password reset request ───────────────────────────────────────────────────
 
 
 class PasswordResetRequestView(APIView):
@@ -166,6 +214,9 @@ class PasswordResetRequestView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+# ─── Password reset confirm ───────────────────────────────────────────────────
 
 
 class PasswordResetConfirmView(APIView):

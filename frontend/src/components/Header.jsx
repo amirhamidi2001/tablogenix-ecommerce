@@ -1,77 +1,36 @@
-// src/components/Header.jsx
-import { useState, useEffect } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import api, { getAccessToken, clearTokens } from '../services/api';
-import { useCart } from '../context/CartContext';   // <-- ADDED
+import { useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Get live cart count from context
-  const { cartCount } = useCart();   // <-- ADDED
+  // ── FIX: read auth state from context, not a local fetch ───────────────
+  // Previously Header had its own isAuthenticated/userName/loading state
+  // with a fetchUserProfile() that called /auth/profile/ independently.
+  // That state was always out of sync with AuthContext, so the dropdown
+  // showed "Welcome to TabloGenix" even when the user was logged in, and
+  // handleLogout only called clearTokens() without nulling AuthContext.user.
+  const { user, isAuthenticated, logout, loading } = useAuth();
 
-  // Fetch user profile if authenticated
-  const fetchUserProfile = async () => {
-    const token = getAccessToken();
-    if (!token) {
-      setIsAuthenticated(false);
-      setUserName('');
-      setLoading(false);
-      return;
-    }
+  // Derive display name from the context user object
+  const userName = user
+    ? (`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email?.split('@')[0] || 'User')
+    : '';
 
-    try {
-      const response = await api.get('/auth/profile/');
-      const profile = response.data;
-      setIsAuthenticated(true);
-      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-      setUserName(fullName || profile.email.split('@')[0] || 'User');
-    } catch (error) {
-      if (error.response?.status === 401) {
-        clearTokens();
-        setIsAuthenticated(false);
-        setUserName('');
-      } else {
-        console.error('Profile fetch error:', error);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Logout handler
-  const handleLogout = () => {
-    clearTokens();
-    setIsAuthenticated(false);
-    setUserName('');
+  // ── FIX: logout through context so AuthContext.user is set to null ──────
+  // Without this, ProtectedRoute still sees the old user object and doesn't
+  // redirect, leaving the app in a half-logged-out state.
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
-  // Listen for auth changes
-  useEffect(() => {
-    fetchUserProfile();
-
-    const handleStorageChange = (e) => {
-      if (e.key === 'access_token') {
-        fetchUserProfile();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
-    const handleAuthChange = () => fetchUserProfile();
-    window.addEventListener('auth-change', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('auth-change', handleAuthChange);
-    };
-  }, [location.pathname]);
+  // Get live cart count from CartContext (unchanged)
+  const { cartCount } = useCart();
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md">
@@ -142,26 +101,36 @@ const Header = () => {
             <i className="bi bi-search"></i>
           </button>
 
-          {/* Account Dropdown (unchanged) */}
+          {/* ── Account dropdown ───────────────────────────────────────── */}
           <div className="dropdown relative group">
             <button className="text-emerald-700 text-xl hover:text-teal-700">
               <i className="bi bi-person"></i>
             </button>
+
             <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-lg hidden group-hover:block z-10 border border-emerald-100 before:content-[''] before:absolute before:-top-3 before:left-0 before:w-full before:h-3">
+              {/* Show nothing while AuthContext is still re-hydrating */}
               {!loading && (
                 <>
                   {isAuthenticated ? (
                     <>
                       <div className="p-4 border-b">
                         <h6 className="font-semibold">Welcome back, {userName}!</h6>
-                        <p className="text-xs text-emerald-500">Manage your account & orders</p>
+                        <p className="text-xs text-emerald-500">Manage your account &amp; orders</p>
                       </div>
                       <div className="py-2">
+                        {/*
+                          FIX: ?tab= deep links now work because Account.jsx
+                          reads useSearchParams() and sets the initial active
+                          tab from the URL on mount.
+                        */}
                         <Link to="/account?tab=orders" className="block px-4 py-2 text-sm hover:bg-emerald-50">Orders</Link>
                         <Link to="/account?tab=wishlist" className="block px-4 py-2 text-sm hover:bg-emerald-50">Wishlist</Link>
                         <Link to="/account?tab=addresses" className="block px-4 py-2 text-sm hover:bg-emerald-50">Addresses</Link>
                         <Link to="/account?tab=settings" className="block px-4 py-2 text-sm hover:bg-emerald-50">Settings</Link>
-                        <button onClick={handleLogout} className="w-full text-center block px-4 py-2 text-sm hover:bg-red-50 text-red-600">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left block px-4 py-2 text-sm hover:bg-red-50 text-red-600"
+                        >
                           <i className="bi bi-box-arrow-right me-1"></i> Logout
                         </button>
                       </div>
@@ -170,7 +139,7 @@ const Header = () => {
                     <>
                       <div className="p-4 border-b">
                         <h6 className="font-semibold">Welcome to TabloGenix</h6>
-                        <p className="text-xs text-emerald-500">Access account & manage orders</p>
+                        <p className="text-xs text-emerald-500">Access account &amp; manage orders</p>
                       </div>
                       <div className="py-2">
                         <Link to="/login" className="block px-4 py-2 text-sm hover:bg-emerald-50">Sign In</Link>
@@ -187,13 +156,13 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Wishlist (static 0 for now) */}
+          {/* Wishlist */}
           <Link to="/account?tab=wishlist" className="relative text-emerald-700 text-xl hover:text-teal-700">
             <i className="bi bi-heart"></i>
             <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
           </Link>
 
-          {/* Cart - DYNAMIC COUNT from context */}
+          {/* Cart — live count from CartContext */}
           <Link to="/cart" className="relative text-emerald-700 text-xl hover:text-teal-700">
             <i className="bi bi-cart3"></i>
             <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -201,13 +170,16 @@ const Header = () => {
             </span>
           </Link>
 
-          <button className="md:hidden text-emerald-700 text-2xl" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button
+            className="md:hidden text-emerald-700 text-2xl"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
             <i className="bi bi-list"></i>
           </button>
         </div>
       </div>
 
-      {/* Desktop Navigation (unchanged) */}
+      {/* ========== Desktop Navigation ========== */}
       <nav className="hidden md:block bg-emerald-800 text-white">
         <div className="container mx-auto px-4">
           <ul className="flex space-x-6">
@@ -217,7 +189,9 @@ const Header = () => {
             <li><NavLink to="/cart" className="block py-3 hover:text-teal-400">Cart</NavLink></li>
             <li><NavLink to="/checkout" className="block py-3 hover:text-teal-400">Checkout</NavLink></li>
             <li className="relative group">
-              <button className="py-3 hover:text-teal-400 flex items-center gap-1">Dropdown <i className="bi bi-chevron-down text-xs"></i></button>
+              <button className="py-3 hover:text-teal-400 flex items-center gap-1">
+                Dropdown <i className="bi bi-chevron-down text-xs"></i>
+              </button>
               <ul className="absolute left-0 mt-0 w-48 bg-white text-emerald-800 shadow-lg rounded-b hidden group-hover:block z-10">
                 <li><a href="#" className="block px-4 py-2 hover:bg-emerald-100">Dropdown 1</a></li>
                 <li><a href="#" className="block px-4 py-2 hover:bg-emerald-100">Dropdown 2</a></li>
@@ -228,7 +202,7 @@ const Header = () => {
         </div>
       </nav>
 
-      {/* Mobile Search & Menu (unchanged) */}
+      {/* ========== Mobile Search ========== */}
       {mobileSearchOpen && (
         <div className="md:hidden bg-white p-4 border-t shadow-lg">
           <form className="flex border border-emerald-300 rounded-full overflow-hidden">
@@ -240,6 +214,7 @@ const Header = () => {
         </div>
       )}
 
+      {/* ========== Mobile Menu ========== */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t shadow-lg p-4">
           <ul className="space-y-3">
@@ -251,7 +226,9 @@ const Header = () => {
             <li><Link to="/checkout" onClick={() => setMobileMenuOpen(false)} className="block text-emerald-800">Checkout</Link></li>
             <li>
               <details className="group">
-                <summary className="cursor-pointer list-none flex justify-between items-center text-emerald-800">Dropdown <i className="bi bi-chevron-down group-open:rotate-180 transition"></i></summary>
+                <summary className="cursor-pointer list-none flex justify-between items-center text-emerald-800">
+                  Dropdown <i className="bi bi-chevron-down group-open:rotate-180 transition"></i>
+                </summary>
                 <ul className="pl-4 mt-2 space-y-2">
                   <li><a href="#" className="block text-emerald-600">Dropdown 1</a></li>
                   <li><a href="#" className="block text-emerald-600">Dropdown 2</a></li>

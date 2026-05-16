@@ -1,4 +1,3 @@
-// src/services/api.js
 import axios from 'axios';
 
 // ─── Base instance ─────────────────────────────────────────────────────────
@@ -110,125 +109,234 @@ export const parseErrors = (error) => {
   return flat;
 };
 
-// ─── Shop API calls ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// AUTH  →  /api/auth/
+// Used by AuthContext — must be exported before any other API group.
+// ═══════════════════════════════════════════════════════════════════════════
+export const authAPI = {
+  /**
+   * POST /auth/login/
+   * Body: { email, password }
+   * Returns: { access, refresh }
+   */
+  login: (credentials) =>
+    api.post('/auth/login/', credentials),
 
-/**
- * Fetch paginated, filtered product list.
- *
- * @param {Object} params
- * @param {number}  [params.page=1]
- * @param {number}  [params.page_size=12]
- * @param {string}  [params.search]
- * @param {string}  [params.category]       slug or id
- * @param {string}  [params.brand]          comma-separated slugs
- * @param {string}  [params.color]          comma-separated ids or names
- * @param {number}  [params.min_price]
- * @param {number}  [params.max_price]
- * @param {boolean} [params.is_new]
- * @param {boolean} [params.is_sale]
- * @param {string}  [params.ordering]       e.g. "price", "-price", "-rating"
- */
+  /**
+   * POST /auth/register/
+   * Body: { email, password, first_name, last_name, ... }
+   */
+  register: (data) =>
+    api.post('/auth/register/', data),
+
+  /**
+   * POST /auth/logout/
+   * Body: { refresh }  — blacklists the refresh token server-side
+   */
+  logout: (refresh) =>
+    api.post('/auth/logout/', { refresh }),
+
+  /**
+   * POST /auth/token/refresh/
+   * Body: { refresh }
+   * Returns: { access, refresh? }
+   */
+  refreshToken: (refresh) =>
+    api.post('/auth/token/refresh/', { refresh }),
+
+  /**
+   * GET /auth/user/
+   * Returns the authenticated user's profile (email, type, is_verified …)
+   * This is what AuthContext calls on mount and after login.
+   */
+  getUser: () =>
+    api.get('/auth/user/'),
+
+  /**
+   * POST /auth/forgot-password/
+   * Body: { email }
+   */
+  forgotPassword: (email) =>
+    api.post('/auth/forgot-password/', { email }),
+
+  /**
+   * POST /auth/reset-password/
+   * Body: { uid, token, new_password, confirm_password }
+   */
+  resetPassword: (data) =>
+    api.post('/auth/reset-password/', data),
+
+  /**
+   * POST /auth/confirm-email/
+   * Body: { token }
+   */
+  confirmEmail: (token) =>
+    api.post('/auth/confirm-email/', { token }),
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SHOP
+// ═══════════════════════════════════════════════════════════════════════════
+
 export const getProducts = (params = {}) =>
   api.get('/products/', { params });
 
-/**
- * Fetch a single product by slug.
- * @param {string} slug
- */
 export const getProductDetails = (slug) =>
   api.get(`/products/${slug}/`);
 
-/**
- * Fetch related products for a given product slug (same category).
- * @param {string} slug
- */
 export const getRelatedProducts = (slug) =>
   api.get(`/products/${slug}/related/`);
 
-/**
- * Fetch the category tree (top-level with nested children).
- */
 export const getCategories = () =>
   api.get('/categories/');
 
-/**
- * Fetch all brands (optionally search by name).
- * @param {string} [search]
- */
 export const getBrands = (search = '') =>
   api.get('/brands/', { params: search ? { search } : {} });
 
-/**
- * Fetch all available colors.
- */
 export const getColors = () =>
   api.get('/colors/');
 
-// ─── Cart API calls ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// CART
+// ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Retrieve the current user's cart.
- * Returns the full Cart object with nested items.
- */
 export const getCart = () =>
   api.get('/cart/');
 
-/**
- * Add a product to the cart (or increment quantity if already present).
- * @param {number} productId
- * @param {number} [quantity=1]
- */
 export const addToCart = (productId, quantity = 1) =>
   api.post('/cart/', { product_id: productId, quantity });
 
-/**
- * Update the quantity of a specific cart item.
- * @param {number} itemId
- * @param {number} quantity  Must be >= 1
- */
 export const updateCartItem = (itemId, quantity) =>
   api.patch(`/cart/item/${itemId}/`, { quantity });
 
-/**
- * Remove a specific item from the cart.
- * @param {number} itemId
- */
 export const removeCartItem = (itemId) =>
   api.delete(`/cart/item/${itemId}/`);
 
-/**
- * Remove all items from the cart.
- */
 export const clearCart = () =>
   api.delete('/cart/clear/');
 
-// ─── Order API calls ───────────────────────────────────────────────────────
+export const cartAPI = {
+  getCart,
+  addToCart,
+  updateCartItem,
+  removeCartItem,
+  clearCart,
+};
+// ═══════════════════════════════════════════════════════════════════════════
+// ORDERS
+// ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Place a new order from the user's current cart.
- * @param {Object} payload  – checkout form data (see OrderCreateSerializer)
- */
 export const createOrder = (payload) =>
   api.post('/orders/', payload);
 
-/**
- * List all orders belonging to the authenticated user.
- */
 export const getOrders = () =>
   api.get('/orders/');
 
-/**
- * Retrieve full detail for a single order.
- * @param {number} orderId
- */
 export const getOrderDetail = (orderId) =>
   api.get(`/orders/${orderId}/`);
 
-/**
- * Cancel an order (only allowed before it ships).
- * @param {number} orderId
- */
 export const cancelOrder = (orderId) =>
   api.patch(`/orders/${orderId}/`, { status: 'cancelled' });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// USER DASHBOARD  →  /api/dashboard/
+// ═══════════════════════════════════════════════════════════════════════════
+export const dashboardAPI = {
+  // Profile
+  getProfile: () => api.get('/dashboard/profile/'),
+  updateProfile: (data) => api.patch('/dashboard/profile/', data),
+  uploadAvatar: (formData) => api.post('/dashboard/profile/upload-avatar/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  // Security
+  changePassword: (data) => api.post('/dashboard/change-password/', data),
+
+  // Notifications
+  getNotifications: () => api.get('/dashboard/notifications/'),
+  updateNotifications: (data) => api.patch('/dashboard/notifications/', data),
+
+  // Summary
+  getSummary: () => api.get('/dashboard/summary/'),
+
+  // Orders
+  getOrders: (params = {}) => api.get('/dashboard/orders/', { params }),
+  getOrder: (id) => api.get(`/dashboard/orders/${id}/`),
+
+  // Wishlist
+  getWishlist: () => api.get('/dashboard/wishlist/'),
+  addToWishlist: (productId) => api.post('/dashboard/wishlist/', { product_id: productId }),
+  removeFromWishlist: (id) => api.delete(`/dashboard/wishlist/${id}/`),
+
+  // Addresses
+  getAddresses: () => api.get('/dashboard/addresses/'),
+  createAddress: (data) => api.post('/dashboard/addresses/', data),
+  updateAddress: (id, data) => api.patch(`/dashboard/addresses/${id}/`, data),
+  deleteAddress: (id) => api.delete(`/dashboard/addresses/${id}/`),
+
+  // Reviews
+  getReviews: (params = {}) => api.get('/dashboard/reviews/', { params }),
+  updateReview: (id, data) => api.patch(`/dashboard/reviews/${id}/`, data),
+  deleteReview: (id) => api.delete(`/dashboard/reviews/${id}/`),
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADMIN DASHBOARD  →  /api/dashboard/admin/
+// ═══════════════════════════════════════════════════════════════════════════
+export const adminAPI = {
+  // Analytics
+  getOverview: (period = '30d') => api.get('/dashboard/admin/overview/', { params: { period } }),
+  getRevenueStats: (months = 12) => api.get('/dashboard/admin/revenue-stats/', { params: { months } }),
+  getUserStats: () => api.get('/dashboard/admin/user-stats/'),
+  getProductStats: () => api.get('/dashboard/admin/product-stats/'),
+
+  // Users
+  getUsers: (params = {}) => api.get('/dashboard/admin/users/', { params }),
+  getUser: (id) => api.get(`/dashboard/admin/users/${id}/`),
+  updateUser: (id, data) => api.patch(`/dashboard/admin/users/${id}/`, data),
+
+  // Products
+  getProducts: (params = {}) => api.get('/dashboard/admin/products/', { params }),
+  getProduct: (id) => api.get(`/dashboard/admin/products/${id}/`),
+  createProduct: (formData) => api.post('/dashboard/admin/products/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updateProduct: (id, formData) => api.patch(`/dashboard/admin/products/${id}/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteProduct: (id) => api.delete(`/dashboard/admin/products/${id}/`),
+
+  // Categories
+  getCategories: (params = {}) => api.get('/dashboard/admin/categories/', { params }),
+  createCategory: (formData) => api.post('/dashboard/admin/categories/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updateCategory: (id, formData) => api.patch(`/dashboard/admin/categories/${id}/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteCategory: (id) => api.delete(`/dashboard/admin/categories/${id}/`),
+
+  // Brands
+  getBrands: (params = {}) => api.get('/dashboard/admin/brands/', { params }),
+  createBrand: (formData) => api.post('/dashboard/admin/brands/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updateBrand: (id, formData) => api.patch(`/dashboard/admin/brands/${id}/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteBrand: (id) => api.delete(`/dashboard/admin/brands/${id}/`),
+
+  // Orders
+  getOrders: (params = {}) => api.get('/dashboard/admin/orders/', { params }),
+  getOrder: (id) => api.get(`/dashboard/admin/orders/${id}/`),
+  updateOrderStatus: (id, status) => api.patch(`/dashboard/admin/orders/${id}/`, { status }),
+
+  // Reviews
+  getReviews: (params = {}) => api.get('/dashboard/admin/reviews/', { params }),
+  deleteReview: (id) => api.delete(`/dashboard/admin/reviews/${id}/`),
+
+  // Contact messages
+  getMessages: (params = {}) => api.get('/dashboard/admin/messages/', { params }),
+  deleteMessage: (id) => api.delete(`/dashboard/admin/messages/${id}/`),
+};
 
 export default api;

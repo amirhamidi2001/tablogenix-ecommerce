@@ -4,25 +4,24 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Profile
 from .tokens import password_reset_token
 
 User = get_user_model()
 
 
-class RegisterSerializer(serializers.Serializer):
-    """Creates a User + updates the auto-generated Profile."""
+# ─── Register ─────────────────────────────────────────────────────────────────
 
-    email = serializers.EmailField()
-    first_name = serializers.CharField(max_length=255)
-    last_name = serializers.CharField(max_length=255)
-    password = serializers.CharField(write_only=True, validators=[validate_password])
 
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ["email", "password"]
+
+    def validate_password(self, value):
+        validate_password(value)
         return value
 
     def create(self, validated_data):
@@ -30,156 +29,180 @@ class RegisterSerializer(serializers.Serializer):
             email=validated_data["email"],
             password=validated_data["password"],
         )
-        # The Profile is created by the post_save signal; just update it.
-        user.profile.first_name = validated_data["first_name"]
-        user.profile.last_name = validated_data["last_name"]
-        user.profile.save()
         return user
 
 
-class RegisterResponseSerializer(serializers.Serializer):
-    """Returns JWT tokens alongside a lightweight user payload."""
-
-    email = serializers.EmailField(source="user.email")
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    access = serializers.SerializerMethodField()
-    refresh = serializers.SerializerMethodField()
-
-    def _tokens(self, obj):
-        if not hasattr(self, "_cached_tokens"):
-            refresh = RefreshToken.for_user(obj.user)
-            self._cached_tokens = {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-            }
-        return self._cached_tokens
-
-    def get_access(self, obj):
-        return self._tokens(obj)["access"]
-
-    def get_refresh(self, obj):
-        return self._tokens(obj)["refresh"]
+# ─── Profile (accounts app — used by ProfileView) ─────────────────────────────
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    """Handles GET and PATCH for the logged-in user's profile + email."""
-
     email = serializers.EmailField(source="user.email", read_only=True)
+    is_verified = serializers.BooleanField(source="user.is_verified", read_only=True)
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
+        from accounts.models import Profile  # local import avoids circular
+
         model = Profile
         fields = [
+            "id",
             "email",
             "first_name",
             "last_name",
             "phone_number",
-            "image",
+            "avatar_url",
             "order_updates",
             "promotions",
             "newsletter",
+            "is_verified",
         ]
-        extra_kwargs = {
-            "image": {"read_only": True},  # handled by a separate upload endpoint
-        }
+        read_only_fields = ["id", "email", "is_verified", "avatar_url"]
 
-    def validate_phone_number(self, value):
-        """Loose E.164-style check: optional +, then up to 12 digits."""
-        if value:
-            stripped = value.replace(" ", "").replace("-", "")
-            digits = stripped.lstrip("+")
-            if not digits.isdigit() or len(digits) > 12:
-                raise serializers.ValidationError(
-                    "Enter a valid phone number (max 12 digits, optional leading +)."
-                )
-        return value
+    def get_avatar_url(self, obj):
+        request = self.context.get("request")
+        if obj.image and hasattr(obj.image, "url"):
+            return (
+                request.build_absolute_uri(obj.image.url) if request else obj.image.url
+            )
+        return None
 
-    def update(self, instance, validated_data):
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
+
+# ─── Current user (used by GET /api/auth/user/) ───────────────────────────────
+
+
+class CurrentUserSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer returned by GET /api/auth/user/.
+
+    AuthContext reads:
+      • user.type          → isAdmin check  (type 2 = Admin, 3 = Superuser)
+      • user.is_verified   → verified badge
+      • user.first_name    → greeting / sidebar display name
+      • user.last_name
+      • user.avatar_url    → sidebar avatar
+    """
+
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "type",
+            "is_verified",
+            "is_active",
+            "is_staff",
+            "first_name",
+            "last_name",
+            "avatar_url",
+        ]
+        read_only_fields = fields
+
+    def _profile(self, obj):
+        try:
+            return obj.profile
+        except Exception:
+            return None
+
+    def get_first_name(self, obj):
+        p = self._profile(obj)
+        return p.first_name if p else ""
+
+    def get_last_name(self, obj):
+        p = self._profile(obj)
+        return p.last_name if p else ""
+
+    def get_avatar_url(self, obj):
+        request = self.context.get("request")
+        p = self._profile(obj)
+        if p and p.image and hasattr(p.image, "url"):
+            return request.build_absolute_uri(p.image.url) if request else p.image.url
+        return None
+
+
+# ─── Change password ──────────────────────────────────────────────────────────
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    """Authenticated endpoint: supply current password then set a new one."""
+    current_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
 
-    current_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(
-        write_only=True, validators=[validate_password]
-    )
-    confirm_password = serializers.CharField(write_only=True)
-
-    def validate(self, attrs):
+    def validate_current_password(self, value):
         user = self.context["request"].user
-
-        if not user.check_password(attrs["current_password"]):
-            raise serializers.ValidationError(
-                {"current_password": "Current password is incorrect."}
-            )
-
-        if attrs["new_password"] != attrs["confirm_password"]:
-            raise serializers.ValidationError(
-                {"confirm_password": "New passwords do not match."}
-            )
-
-        return attrs
-
-    def save(self, **kwargs):
-        user = self.context["request"].user
-        user.set_password(self.validated_data["new_password"])
-        user.save()
-        return user
-
-
-class PasswordResetRequestSerializer(serializers.Serializer):
-    """Accepts an email address and triggers the reset email."""
-
-    email = serializers.EmailField()
-
-    def validate_email(self, value):
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
         return value
-
-    def get_user(self):
-        email = self.validated_data["email"]
-        try:
-            return User.objects.get(email=email, is_active=True)
-        except User.DoesNotExist:
-            return None
-
-
-class PasswordResetConfirmSerializer(serializers.Serializer):
-    """Validates the uidb64 + token pair and sets a new password."""
-
-    uid = serializers.CharField()
-    token = serializers.CharField()
-    new_password = serializers.CharField(
-        write_only=True, validators=[validate_password]
-    )
-    confirm_password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         if attrs["new_password"] != attrs["confirm_password"]:
             raise serializers.ValidationError(
                 {"confirm_password": "Passwords do not match."}
             )
+        validate_password(attrs["new_password"], self.context["request"].user)
+        return attrs
 
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user
+
+
+# ─── Password reset request ───────────────────────────────────────────────────
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, value):
+        return value.lower().strip()
+
+    def get_user(self):
+        try:
+            return User.objects.get(email=self.validated_data["email"])
+        except User.DoesNotExist:
+            return None
+
+
+# ─── Password reset confirm ───────────────────────────────────────────────────
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(required=True)
+    token = serializers.CharField(required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        # Decode UID
         try:
             uid = force_str(urlsafe_base64_decode(attrs["uid"]))
             user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
             raise serializers.ValidationError({"uid": "Invalid reset link."})
 
+        # Validate token
         if not password_reset_token.check_token(user, attrs["token"]):
             raise serializers.ValidationError(
-                {"token": "Token is invalid or has expired."}
+                {"token": "Reset link is invalid or has expired."}
             )
 
+        # Validate passwords match
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match."}
+            )
+
+        validate_password(attrs["new_password"], user)
         attrs["user"] = user
         return attrs
 
     def save(self, **kwargs):
         user = self.validated_data["user"]
         user.set_password(self.validated_data["new_password"])
-        user.save()
+        user.save(update_fields=["password"])
         return user
