@@ -1,4 +1,6 @@
 services:
+
+  # ─── PostgreSQL ────────────────────────────────────────────────────────────
   db:
     image: postgres:15
     container_name: backend_db
@@ -16,6 +18,43 @@ services:
       timeout: 5s
       retries: 5
 
+  # ─── Elasticsearch 8 ──────────────────────────────────────────────────────
+  elasticsearch:
+    image: elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      # Disable security for dev; enable + configure certs in production
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+      - cluster.name=ecommerce-cluster
+      - node.name=es-node-01
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1",
+        ]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  # ─── Django Backend ────────────────────────────────────────────────────────
   backend:
     build: ./backend
     container_name: backend
@@ -31,10 +70,15 @@ services:
       DATABASE_PASSWORD: postgres
       DATABASE_HOST: db
       DATABASE_PORT: 5432
+      # Elasticsearch
+      ELASTICSEARCH_HOST: http://elasticsearch:9200
     depends_on:
       db:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
 
+  # ─── React / Vite Frontend ─────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -51,3 +95,4 @@ services:
 
 volumes:
   postgres_data:
+  elasticsearch_data:

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "django_filters",
+    "django_elasticsearch_dsl",
     # Local
     "accounts.apps.AccountsConfig",
     "contact.apps.ContactConfig",
@@ -98,6 +99,31 @@ DATABASES = {
         "PORT": config("DATABASE_PORT"),
     }
 }
+
+# ─── Elasticsearch ────────────────────────────────────────────────────────────
+ELASTICSEARCH_DSL = {
+    "default": {
+        "hosts": config("ELASTICSEARCH_HOST", default="http://localhost:9200"),
+        # For production with security enabled, uncomment and configure:
+        # "http_auth": (
+        #     config("ELASTICSEARCH_USER", default="elastic"),
+        #     config("ELASTICSEARCH_PASSWORD", default=""),
+        # ),
+        # "use_ssl": True,
+        # "verify_certs": True,
+        # "ca_certs": config("ELASTICSEARCH_CA_CERTS", default=""),
+    },
+}
+
+# Auto-sync documents when Django models are saved/deleted via signals.
+# Set to False in data-migration scripts to avoid per-row indexing overhead;
+# run `python manage.py es_reindex` instead.
+ELASTICSEARCH_DSL_AUTOSYNC = config(
+    "ELASTICSEARCH_DSL_AUTOSYNC", default=True, cast=bool
+)
+
+# Maximum number of parallel bulk-index requests
+ELASTICSEARCH_DSL_PARALLEL = config("ELASTICSEARCH_DSL_PARALLEL", default=4, cast=int)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

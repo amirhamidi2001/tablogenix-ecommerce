@@ -111,71 +111,20 @@ export const parseErrors = (error) => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AUTH  →  /api/auth/
-// Used by AuthContext — must be exported before any other API group.
 // ═══════════════════════════════════════════════════════════════════════════
 export const authAPI = {
-  /**
-   * POST /auth/login/
-   * Body: { email, password }
-   * Returns: { access, refresh }
-   */
-  login: (credentials) =>
-    api.post('/auth/login/', credentials),
-
-  /**
-   * POST /auth/register/
-   * Body: { email, password, first_name, last_name, ... }
-   */
-  register: (data) =>
-    api.post('/auth/register/', data),
-
-  /**
-   * POST /auth/logout/
-   * Body: { refresh }  — blacklists the refresh token server-side
-   */
-  logout: (refresh) =>
-    api.post('/auth/logout/', { refresh }),
-
-  /**
-   * POST /auth/token/refresh/
-   * Body: { refresh }
-   * Returns: { access, refresh? }
-   */
-  refreshToken: (refresh) =>
-    api.post('/auth/token/refresh/', { refresh }),
-
-  /**
-   * GET /auth/user/
-   * Returns the authenticated user's profile (email, type, is_verified …)
-   * This is what AuthContext calls on mount and after login.
-   */
-  getUser: () =>
-    api.get('/auth/user/'),
-
-  /**
-   * POST /auth/forgot-password/
-   * Body: { email }
-   */
-  forgotPassword: (email) =>
-    api.post('/auth/forgot-password/', { email }),
-
-  /**
-   * POST /auth/reset-password/
-   * Body: { uid, token, new_password, confirm_password }
-   */
-  resetPassword: (data) =>
-    api.post('/auth/reset-password/', data),
-
-  /**
-   * POST /auth/confirm-email/
-   * Body: { token }
-   */
-  confirmEmail: (token) =>
-    api.post('/auth/confirm-email/', { token }),
+  login: (credentials) => api.post('/auth/login/', credentials),
+  register: (data) => api.post('/auth/register/', data),
+  logout: (refresh) => api.post('/auth/logout/', { refresh }),
+  refreshToken: (refresh) => api.post('/auth/token/refresh/', { refresh }),
+  getUser: () => api.get('/auth/user/'),
+  forgotPassword: (email) => api.post('/auth/forgot-password/', { email }),
+  resetPassword: (data) => api.post('/auth/reset-password/', data),
+  confirmEmail: (token) => api.post('/auth/confirm-email/', { token }),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SHOP
+// SHOP  →  /api/  (existing — unchanged)
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const getProducts = (params = {}) =>
@@ -197,23 +146,65 @@ export const getColors = () =>
   api.get('/colors/');
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ELASTICSEARCH SEARCH  →  /api/search/
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Full-text Elasticsearch product search with faceted filters.
+ *
+ * @param {Object} params
+ * @param {string}  params.q           - Full-text query
+ * @param {string}  params.category    - Category slug filter
+ * @param {string}  params.brand       - Brand slug filter
+ * @param {number}  params.min_price   - Minimum price
+ * @param {number}  params.max_price   - Maximum price
+ * @param {boolean} params.is_new      - New arrivals filter
+ * @param {boolean} params.is_sale     - On-sale filter
+ * @param {boolean} params.in_stock    - In-stock filter
+ * @param {string}  params.sort        - Sort order (relevance|price-asc|price-desc|rating|newest|popular)
+ * @param {number}  params.page        - Page number (1-based)
+ * @param {number}  params.page_size   - Results per page
+ *
+ * @returns {Promise<{
+ *   count: number,
+ *   page: number,
+ *   pages: number,
+ *   page_size: number,
+ *   results: Array,
+ *   aggregations: {
+ *     categories: Array,
+ *     brands: Array,
+ *     price_stats: Object,
+ *     price_ranges: Array,
+ *     new_count: number,
+ *     sale_count: number,
+ *   },
+ *   fallback?: boolean,
+ * }>}
+ */
+export const searchProducts = (params = {}) =>
+  api.get('/search/', { params });
+
+/**
+ * Lightweight autocomplete suggestions.
+ *
+ * @param {string} q - Partial search query (min 2 chars)
+ * @returns {Promise<{ suggestions: Array<{id, name, slug, thumbnail, price, category}> }>}
+ */
+export const autocompleteProducts = (q) =>
+  api.get('/search/autocomplete/', { params: { q } });
+
+// ═══════════════════════════════════════════════════════════════════════════
 // CART
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const getCart = () =>
-  api.get('/cart/');
-
+export const getCart = () => api.get('/cart/');
 export const addToCart = (productId, quantity = 1) =>
   api.post('/cart/', { product_id: productId, quantity });
-
 export const updateCartItem = (itemId, quantity) =>
   api.patch(`/cart/item/${itemId}/`, { quantity });
-
-export const removeCartItem = (itemId) =>
-  api.delete(`/cart/item/${itemId}/`);
-
-export const clearCart = () =>
-  api.delete('/cart/clear/');
+export const removeCartItem = (itemId) => api.delete(`/cart/item/${itemId}/`);
+export const clearCart = () => api.delete('/cart/clear/');
 
 export const cartAPI = {
   getCart,
@@ -222,19 +213,14 @@ export const cartAPI = {
   removeCartItem,
   clearCart,
 };
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ORDERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const createOrder = (payload) =>
-  api.post('/orders/', payload);
-
-export const getOrders = () =>
-  api.get('/orders/');
-
-export const getOrderDetail = (orderId) =>
-  api.get(`/orders/${orderId}/`);
-
+export const createOrder = (payload) => api.post('/orders/', payload);
+export const getOrders = () => api.get('/orders/');
+export const getOrderDetail = (orderId) => api.get(`/orders/${orderId}/`);
 export const cancelOrder = (orderId) =>
   api.patch(`/orders/${orderId}/`, { status: 'cancelled' });
 
@@ -242,38 +228,26 @@ export const cancelOrder = (orderId) =>
 // USER DASHBOARD  →  /api/dashboard/
 // ═══════════════════════════════════════════════════════════════════════════
 export const dashboardAPI = {
-  // Profile
   getProfile: () => api.get('/dashboard/profile/'),
   updateProfile: (data) => api.patch('/dashboard/profile/', data),
-  uploadAvatar: (formData) => api.post('/dashboard/profile/upload-avatar/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  // Security
+  uploadAvatar: (formData) =>
+    api.post('/dashboard/profile/upload-avatar/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   changePassword: (data) => api.post('/dashboard/change-password/', data),
-
-  // Notifications
   getNotifications: () => api.get('/dashboard/notifications/'),
   updateNotifications: (data) => api.patch('/dashboard/notifications/', data),
-
-  // Summary
   getSummary: () => api.get('/dashboard/summary/'),
-
-  // Orders
   getOrders: (params = {}) => api.get('/dashboard/orders/', { params }),
   getOrder: (id) => api.get(`/dashboard/orders/${id}/`),
-
-  // Wishlist
   getWishlist: () => api.get('/dashboard/wishlist/'),
-  addToWishlist: (productId) => api.post('/dashboard/wishlist/', { product_id: productId }),
+  addToWishlist: (productId) =>
+    api.post('/dashboard/wishlist/', { product_id: productId }),
   removeFromWishlist: (id) => api.delete(`/dashboard/wishlist/${id}/`),
-
-  // Addresses
   getAddresses: () => api.get('/dashboard/addresses/'),
   createAddress: (data) => api.post('/dashboard/addresses/', data),
   updateAddress: (id, data) => api.patch(`/dashboard/addresses/${id}/`, data),
   deleteAddress: (id) => api.delete(`/dashboard/addresses/${id}/`),
-
-  // Reviews
   getReviews: (params = {}) => api.get('/dashboard/reviews/', { params }),
   updateReview: (id, data) => api.patch(`/dashboard/reviews/${id}/`, data),
   deleteReview: (id) => api.delete(`/dashboard/reviews/${id}/`),
@@ -283,59 +257,64 @@ export const dashboardAPI = {
 // ADMIN DASHBOARD  →  /api/dashboard/admin/
 // ═══════════════════════════════════════════════════════════════════════════
 export const adminAPI = {
-  // Analytics
-  getOverview: (period = '30d') => api.get('/dashboard/admin/overview/', { params: { period } }),
-  getRevenueStats: (months = 12) => api.get('/dashboard/admin/revenue-stats/', { params: { months } }),
+  getOverview: (period = '30d') =>
+    api.get('/dashboard/admin/overview/', { params: { period } }),
+  getRevenueStats: (months = 12) =>
+    api.get('/dashboard/admin/revenue-stats/', { params: { months } }),
   getUserStats: () => api.get('/dashboard/admin/user-stats/'),
   getProductStats: () => api.get('/dashboard/admin/product-stats/'),
 
-  // Users
   getUsers: (params = {}) => api.get('/dashboard/admin/users/', { params }),
   getUser: (id) => api.get(`/dashboard/admin/users/${id}/`),
   updateUser: (id, data) => api.patch(`/dashboard/admin/users/${id}/`, data),
 
-  // Products
-  getProducts: (params = {}) => api.get('/dashboard/admin/products/', { params }),
+  getProducts: (params = {}) =>
+    api.get('/dashboard/admin/products/', { params }),
   getProduct: (id) => api.get(`/dashboard/admin/products/${id}/`),
-  createProduct: (formData) => api.post('/dashboard/admin/products/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  updateProduct: (id, formData) => api.patch(`/dashboard/admin/products/${id}/`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  createProduct: (formData) =>
+    api.post('/dashboard/admin/products/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  updateProduct: (id, formData) =>
+    api.patch(`/dashboard/admin/products/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   deleteProduct: (id) => api.delete(`/dashboard/admin/products/${id}/`),
 
-  // Categories
-  getCategories: (params = {}) => api.get('/dashboard/admin/categories/', { params }),
-  createCategory: (formData) => api.post('/dashboard/admin/categories/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  updateCategory: (id, formData) => api.patch(`/dashboard/admin/categories/${id}/`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  getCategories: (params = {}) =>
+    api.get('/dashboard/admin/categories/', { params }),
+  createCategory: (formData) =>
+    api.post('/dashboard/admin/categories/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  updateCategory: (id, formData) =>
+    api.patch(`/dashboard/admin/categories/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   deleteCategory: (id) => api.delete(`/dashboard/admin/categories/${id}/`),
 
-  // Brands
   getBrands: (params = {}) => api.get('/dashboard/admin/brands/', { params }),
-  createBrand: (formData) => api.post('/dashboard/admin/brands/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  updateBrand: (id, formData) => api.patch(`/dashboard/admin/brands/${id}/`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  createBrand: (formData) =>
+    api.post('/dashboard/admin/brands/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  updateBrand: (id, formData) =>
+    api.patch(`/dashboard/admin/brands/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   deleteBrand: (id) => api.delete(`/dashboard/admin/brands/${id}/`),
 
-  // Orders
   getOrders: (params = {}) => api.get('/dashboard/admin/orders/', { params }),
   getOrder: (id) => api.get(`/dashboard/admin/orders/${id}/`),
-  updateOrderStatus: (id, status) => api.patch(`/dashboard/admin/orders/${id}/`, { status }),
+  updateOrderStatus: (id, status) =>
+    api.patch(`/dashboard/admin/orders/${id}/`, { status }),
 
-  // Reviews
-  getReviews: (params = {}) => api.get('/dashboard/admin/reviews/', { params }),
+  getReviews: (params = {}) =>
+    api.get('/dashboard/admin/reviews/', { params }),
   deleteReview: (id) => api.delete(`/dashboard/admin/reviews/${id}/`),
 
-  // Contact messages
-  getMessages: (params = {}) => api.get('/dashboard/admin/messages/', { params }),
+  getMessages: (params = {}) =>
+    api.get('/dashboard/admin/messages/', { params }),
   deleteMessage: (id) => api.delete(`/dashboard/admin/messages/${id}/`),
 };
 

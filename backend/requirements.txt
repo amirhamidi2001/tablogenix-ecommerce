@@ -24,3 +24,7 @@ rpds-py==0.30.0
 sqlparse==0.5.5
 typing_extensions==4.15.0
 uritemplate==4.2.0
+# ─── Elasticsearch 8 ──────────────────────────────────────────────────────────
+elasticsearch==8.13.1
+elasticsearch-dsl==8.13.1
+django-elasticsearch-dsl==8.0
