@@ -175,7 +175,7 @@ export const authAPI = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SHOP
+// SHOP  →  /api/products/, /api/categories/, etc.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const getProducts = (params = {}) =>
@@ -186,6 +186,17 @@ export const getProductDetails = (slug) =>
 
 export const getRelatedProducts = (slug) =>
   api.get(`/products/${slug}/related/`);
+
+/**
+ * POST /products/<slug>/reviews/
+ * Body: { name, rating, headline?, comment }
+ * Returns the newly created review: { id, name, rating, headline, comment, created_at }
+ *
+ * The backend also recalculates and persists product.rating / product.reviews_count
+ * after every successful submission.
+ */
+export const createReview = (slug, data) =>
+  api.post(`/products/${slug}/reviews/`, data);
 
 export const getCategories = () =>
   api.get('/categories/');
@@ -222,6 +233,7 @@ export const cartAPI = {
   removeCartItem,
   clearCart,
 };
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ORDERS
 // ═══════════════════════════════════════════════════════════════════════════
