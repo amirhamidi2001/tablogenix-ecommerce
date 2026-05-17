@@ -205,10 +205,10 @@ class WishlistSerializer(serializers.ModelSerializer):
             )
         return attrs
 
-    def create(self, validated_data):
-        return Wishlist.objects.create(
-            user=self.context["request"].user, **validated_data
-        )
+    # def create(self, validated_data):
+    #     return Wishlist.objects.create(
+    #         user=self.context["request"].user, **validated_data
+    #     )
 
 
 # ─── Orders ──────────────────────────────────────────────────────────────────

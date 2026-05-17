@@ -1,8 +1,10 @@
+// src/App.jsx
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 
 // ─── Context providers ────────────────────────────────────────────────────
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 
 // ─── Shared layout pieces ─────────────────────────────────────────────────
 import Header from './components/Header';
@@ -22,7 +24,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminMessages from './pages/admin/AdminMessages';
 
-// ─── Existing pages (unchanged) ───────────────────────────────────────────
+// ─── Storefront pages ─────────────────────────────────────────────────────
 import Home from './pages/Home';
 import About from './pages/About';
 import Account from './pages/Account';
@@ -57,8 +59,7 @@ import { useAuth } from './context/AuthContext';
 
 /**
  * MainLayout — renders the shared Header + Footer around every non-admin page.
- * Admin pages use AdminLayout (their own full-screen sidebar shell) and must
- * NOT render the storefront Header/Footer.
+ * Admin pages use AdminLayout and must NOT render the storefront Header/Footer.
  */
 const MainLayout = () => (
   <>
@@ -129,65 +130,72 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        {/*
+          WishlistProvider is nested inside AuthProvider so it can react to
+          auth-change events dispatched by AuthContext on login/logout.
+          CartProvider follows the same pattern.
+        */}
         <CartProvider>
-          <Routes>
+          <WishlistProvider>
+            <Routes>
 
-            {/* ── Storefront routes (Header + Footer via MainLayout) ──────── */}
-            <Route element={<MainLayout />}>
+              {/* ── Storefront routes (Header + Footer via MainLayout) ──────── */}
+              <Route element={<MainLayout />}>
 
-              {/* Public */}
-              <Route path="/" element={<Home />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/category" element={<Category />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/faq" element={<Faq />} />
-              <Route path="/payment-methods" element={<PaymentMethods />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/product-details" element={<ProductDetails />} />
-              <Route path="/product/:slug" element={<ProductDetails />} />
-              <Route path="/product-lists" element={<ProductLists />} />
-              <Route path="/return-policy" element={<ReturnPolicy />} />
-              <Route path="/search" element={<SearchResults />} />
-              <Route path="/shipping-info" element={<ShippingInfo />} />
-              <Route path="/support" element={<Support />} />
-              <Route path="/tos" element={<Tos />} />
+                {/* Public */}
+                <Route path="/" element={<Home />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/category" element={<Category />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/faq" element={<Faq />} />
+                <Route path="/payment-methods" element={<PaymentMethods />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/product-details" element={<ProductDetails />} />
+                <Route path="/product/:slug" element={<ProductDetails />} />
+                <Route path="/product-lists" element={<ProductLists />} />
+                <Route path="/return-policy" element={<ReturnPolicy />} />
+                <Route path="/search" element={<SearchResults />} />
+                <Route path="/shipping-info" element={<ShippingInfo />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/tos" element={<Tos />} />
 
-              {/* Guest-only (redirect to /account when logged in) */}
-              <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-              <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-              <Route path="/reset-password/:uid/:token" element={<GuestRoute><ResetPassword /></GuestRoute>} />
-              <Route path="/confirm-email" element={<GuestRoute><ConfirmEmail /></GuestRoute>} />
+                {/* Guest-only (redirect to /account when logged in) */}
+                <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+                <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+                <Route path="/reset-password/:uid/:token" element={<GuestRoute><ResetPassword /></GuestRoute>} />
+                <Route path="/confirm-email" element={<GuestRoute><ConfirmEmail /></GuestRoute>} />
 
-              {/* Auth-required */}
-              <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
-              <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
-              <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-              <Route path="/order-confirmation/:id" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
+                {/* Auth-required */}
+                <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+                <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
+                <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                <Route path="/order-confirmation/:id" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
 
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Route>
+                {/* 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Route>
 
-            {/* ── Admin routes (AdminLayout — no storefront Header/Footer) ─ */}
-            <Route
-              path="/admin"
-              element={<AdminRoute><AdminLayout /></AdminRoute>}
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="categories" element={<AdminCategories />} />
-              <Route path="brands" element={<AdminBrands />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="reviews" element={<AdminReviews />} />
-              <Route path="messages" element={<AdminMessages />} />
-              {/* Unknown /admin/* → back to overview */}
-              <Route path="*" element={<Navigate to="/admin" replace />} />
-            </Route>
+              {/* ── Admin routes (AdminLayout — no storefront Header/Footer) ─ */}
+              <Route
+                path="/admin"
+                element={<AdminRoute><AdminLayout /></AdminRoute>}
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="brands" element={<AdminBrands />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="reviews" element={<AdminReviews />} />
+                <Route path="messages" element={<AdminMessages />} />
+                {/* Unknown /admin/* → back to overview */}
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Route>
 
-          </Routes>
+            </Routes>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

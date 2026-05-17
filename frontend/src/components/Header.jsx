@@ -1,6 +1,8 @@
+// src/components/Header.jsx
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
@@ -8,29 +10,21 @@ const Header = () => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const navigate = useNavigate();
 
-  // ── FIX: read auth state from context, not a local fetch ───────────────
-  // Previously Header had its own isAuthenticated/userName/loading state
-  // with a fetchUserProfile() that called /auth/profile/ independently.
-  // That state was always out of sync with AuthContext, so the dropdown
-  // showed "Welcome to TabloGenix" even when the user was logged in, and
-  // handleLogout only called clearTokens() without nulling AuthContext.user.
+  // ── Auth state ──────────────────────────────────────────────────────────
   const { user, isAuthenticated, logout, loading } = useAuth();
 
-  // Derive display name from the context user object
   const userName = user
     ? (`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email?.split('@')[0] || 'User')
     : '';
 
-  // ── FIX: logout through context so AuthContext.user is set to null ──────
-  // Without this, ProtectedRoute still sees the old user object and doesn't
-  // redirect, leaving the app in a half-logged-out state.
   const handleLogout = async () => {
     await logout();
     navigate('/');
   };
 
-  // Get live cart count from CartContext (unchanged)
+  // ── Live counts from context ────────────────────────────────────────────
   const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md">
@@ -101,14 +95,13 @@ const Header = () => {
             <i className="bi bi-search"></i>
           </button>
 
-          {/* ── Account dropdown ───────────────────────────────────────── */}
+          {/* ── Account dropdown ─────────────────────────────────────────── */}
           <div className="dropdown relative group">
             <button className="text-emerald-700 text-xl hover:text-teal-700">
               <i className="bi bi-person"></i>
             </button>
 
             <div className="absolute right-0 mt-3 w-64 bg-white shadow-xl rounded-lg hidden group-hover:block z-10 border border-emerald-100 before:content-[''] before:absolute before:-top-3 before:left-0 before:w-full before:h-3">
-              {/* Show nothing while AuthContext is still re-hydrating */}
               {!loading && (
                 <>
                   {isAuthenticated ? (
@@ -118,11 +111,6 @@ const Header = () => {
                         <p className="text-xs text-emerald-500">Manage your account &amp; orders</p>
                       </div>
                       <div className="py-2">
-                        {/*
-                          FIX: ?tab= deep links now work because Account.jsx
-                          reads useSearchParams() and sets the initial active
-                          tab from the URL on mount.
-                        */}
                         <Link to="/account?tab=orders" className="block px-4 py-2 text-sm hover:bg-emerald-50">Orders</Link>
                         <Link to="/account?tab=wishlist" className="block px-4 py-2 text-sm hover:bg-emerald-50">Wishlist</Link>
                         <Link to="/account?tab=addresses" className="block px-4 py-2 text-sm hover:bg-emerald-50">Addresses</Link>
@@ -156,13 +144,22 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Wishlist */}
+          {/* ── Wishlist — live count from WishlistContext ────────────────── */}
           <Link to="/account?tab=wishlist" className="relative text-emerald-700 text-xl hover:text-teal-700">
             <i className="bi bi-heart"></i>
-            <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+            {wishlistCount > 0 && (
+              <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {wishlistCount > 99 ? '99+' : wishlistCount}
+              </span>
+            )}
+            {wishlistCount === 0 && (
+              <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                0
+              </span>
+            )}
           </Link>
 
-          {/* Cart — live count from CartContext */}
+          {/* ── Cart — live count from CartContext ───────────────────────── */}
           <Link to="/cart" className="relative text-emerald-700 text-xl hover:text-teal-700">
             <i className="bi bi-cart3"></i>
             <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">

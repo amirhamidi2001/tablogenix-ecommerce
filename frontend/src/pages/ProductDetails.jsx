@@ -1,8 +1,8 @@
-// src/pages/ProductDetails.jsx
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getProductDetails, getRelatedProducts } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 // ─── Spinner ────────────────────────────────────────────────────────────────
 const Spinner = () => (
@@ -95,6 +95,7 @@ const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist, getWishlistItemId } = useWishlist();
 
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -110,13 +111,30 @@ const ProductDetails = () => {
   const [selectedColor, setSelectedColor] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Cart action state
+  // Cart / wishlist action states
   const [addingToCart, setAddingToCart] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
+  const [wishlistToggling, setWishlistToggling] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success') => setToast({ message, type });
   const hideToast = () => setToast(null);
+
+  // Check if this product is in wishlist (using context)
+  const productInWishlist = product ? isInWishlist(product.id) : false;
+
+  // Handle wishlist toggle with loading state and toast
+  const handleToggleWishlist = async () => {
+    if (!product) return;
+    setWishlistToggling(true);
+    const result = await toggleWishlist(product.id);
+    setWishlistToggling(false);
+    if (!result.success) {
+      showToast(result.message, 'error');
+    } else {
+      showToast(result.message, 'success');
+    }
+  };
 
   // ── Fetch product ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -135,13 +153,11 @@ const ProductDetails = () => {
         setProduct(data);
         setRelatedProducts(Array.isArray(relatedRes.data) ? relatedRes.data : relatedRes.data.results || []);
 
-        // Set initial gallery image
         const firstImage = data.thumbnail_url ||
           (data.images?.length ? data.images[0].image : '/assets/img/product/product-3.webp');
         setSelectedImage(firstImage);
         setCurrentIndex(0);
 
-        // Set initial color
         if (data.colors?.length) {
           setSelectedColor(data.colors[0].color);
         }
@@ -180,7 +196,7 @@ const ProductDetails = () => {
 
   if (!product) return null;
 
-  // ── Derived values ─────────────────────────────────────────────────────────
+  // Derived values
   const allImages = product.images?.length
     ? product.images.map((img) => img.image)
     : [product.thumbnail_url || '/assets/img/product/product-3.webp'];
@@ -190,7 +206,7 @@ const ProductDetails = () => {
     : null;
   const discountPercent = product.discount_percent || 0;
 
-  // ── Gallery handlers ───────────────────────────────────────────────────────
+  // Gallery handlers
   const handleThumbnail = (img, idx) => {
     setSelectedImage(img);
     setCurrentIndex(idx);
@@ -208,12 +224,12 @@ const ProductDetails = () => {
     setSelectedImage(allImages[idx]);
   };
 
-  // ── Quantity handlers ──────────────────────────────────────────────────────
+  // Quantity handlers
   const maxQty = product.stock || 1;
   const increaseQty = () => { if (quantity < maxQty) setQuantity((q) => q + 1); };
   const decreaseQty = () => { if (quantity > 1) setQuantity((q) => q - 1); };
 
-  // ── Cart handlers ──────────────────────────────────────────────────────────
+  // Cart handlers
   const handleAddToCart = async () => {
     setAddingToCart(true);
     const result = await addToCart(product.id, quantity);
@@ -232,7 +248,7 @@ const ProductDetails = () => {
     }
   };
 
-  // ── Rating distribution (from reviews) ────────────────────────────────────
+  // Reviews distribution
   const reviews = product.reviews || [];
   const ratingDist = [5, 4, 3, 2, 1].map((stars) => {
     const count = reviews.filter((r) => r.rating === stars).length;
@@ -242,7 +258,6 @@ const ProductDetails = () => {
 
   return (
     <>
-      {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
       {/* Page Title */}
@@ -265,12 +280,12 @@ const ProductDetails = () => {
         </div>
       </div>
 
-      {/* ── Product Section ─────────────────────────────────────────────── */}
+      {/* Product Section */}
       <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row gap-8">
 
-            {/* Left — Gallery */}
+            {/* Gallery */}
             <div className="lg:w-7/12">
               <div className="relative bg-gray-100 rounded-2xl overflow-hidden mb-4">
                 <img
@@ -323,7 +338,7 @@ const ProductDetails = () => {
               )}
             </div>
 
-            {/* Right — Product Info */}
+            {/* Product Info */}
             <div className="lg:w-5/12">
               {/* Category & Rating */}
               <div className="flex justify-between items-start mb-3">
@@ -467,7 +482,7 @@ const ProductDetails = () => {
                   </span>
                 </div>
 
-                {/* CTA Buttons */}
+                {/* Action Buttons with Wishlist */}
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={handleAddToCart}
@@ -492,15 +507,24 @@ const ProductDetails = () => {
                     )}
                   </button>
                   <button
-                    className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                    title="Add to Wishlist"
+                    onClick={handleToggleWishlist}
+                    disabled={wishlistToggling}
+                    className={`p-3 border rounded-lg transition flex items-center justify-center ${productInWishlist
+                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title={productInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   >
-                    <i className="bi bi-heart text-gray-600"></i>
+                    {wishlistToggling ? (
+                      <i className="bi bi-arrow-repeat animate-spin"></i>
+                    ) : (
+                      <i className={`bi ${productInWishlist ? 'bi-heart-fill' : 'bi-heart'} text-xl`}></i>
+                    )}
                   </button>
                 </div>
               </div>
 
-              {/* Social Share / Meta */}
+              {/* Social Meta */}
               <div className="border-t border-gray-100 pt-4 flex gap-4 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <i className="bi bi-share"></i>
@@ -508,7 +532,7 @@ const ProductDetails = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <i className="bi bi-heart"></i>
-                  <a href="#" className="hover:text-teal-600">Wishlist</a>
+                  <a href="#" className="hover:text-teal-600" onClick={(e) => { e.preventDefault(); handleToggleWishlist(); }}>Wishlist</a>
                 </span>
                 {product.brand && (
                   <span className="flex items-center gap-1">
@@ -536,7 +560,7 @@ const ProductDetails = () => {
             </div>
           </div>
 
-          {/* ── Tabs Section ─────────────────────────────────────────────── */}
+          {/* Tabs Section (unchanged) */}
           <div className="mt-16">
             <div className="border-b border-gray-200 mb-8">
               <nav className="flex gap-0 overflow-x-auto">
@@ -550,8 +574,8 @@ const ProductDetails = () => {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${activeTab === tab.id
-                        ? 'border-teal-600 text-teal-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-teal-600 text-teal-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                   >
                     {tab.label}
@@ -694,7 +718,6 @@ const ProductDetails = () => {
             {/* Reviews Tab */}
             {activeTab === 'reviews' && (
               <div>
-                {/* Rating Overview */}
                 <div className="flex flex-col md:flex-row gap-8 mb-10 p-6 bg-gray-50 rounded-xl">
                   <div className="text-center md:w-1/3">
                     <div className="text-5xl font-bold text-gray-800">{product.rating}</div>
@@ -726,7 +749,6 @@ const ProductDetails = () => {
                   </div>
                 </div>
 
-                {/* Reviews list */}
                 {reviews.length > 0 ? (
                   <div className="space-y-6">
                     {reviews.map((review) => (
@@ -768,7 +790,7 @@ const ProductDetails = () => {
             )}
           </div>
 
-          {/* ── Related Products ─────────────────────────────────────────── */}
+          {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div className="mt-16">
               <div className="flex items-center justify-between mb-6">
