@@ -48,13 +48,49 @@ class ProductColorSerializer(serializers.ModelSerializer):
         fields = ("id", "color")
 
 
+# ─── Review — read (used inside product detail & review list responses) ───────
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ("id", "name", "rating", "headline", "comment", "created_at")
 
 
-# ─── Product list serializer — lightweight, no nested reviews ─────────────
+# ─── Review — write (validates and accepts new review submissions) ────────────
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    """
+    Write-only serializer for POSTing a new review.
+    The `product` field is injected in the view via perform_create / save(product=…)
+    and is therefore excluded from the input fields.
+    """
+
+    class Meta:
+        model = Review
+        fields = ("name", "rating", "headline", "comment")
+
+    def validate_name(self, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Name cannot be blank.")
+        return value
+
+    def validate_rating(self, value: int) -> int:
+        if not (1 <= value <= 5):
+            raise serializers.ValidationError(
+                "Rating must be an integer between 1 and 5."
+            )
+        return value
+
+    def validate_comment(self, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Review comment cannot be blank.")
+        return value
+
+    def validate_headline(self, value: str) -> str:
+        return value.strip()
+
+
+# ─── Product list serializer — lightweight, no nested reviews ─────────────────
 class ProductListSerializer(serializers.ModelSerializer):
     category = CategoryMinimalSerializer(read_only=True)
     brand = BrandSerializer(read_only=True)
@@ -89,7 +125,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         return None
 
 
-# ─── Product detail serializer — full with nested relations ───────────────
+# ─── Product detail serializer — full with nested relations ───────────────────
 class ProductDetailSerializer(serializers.ModelSerializer):
     category = CategoryMinimalSerializer(read_only=True)
     brand = BrandSerializer(read_only=True)

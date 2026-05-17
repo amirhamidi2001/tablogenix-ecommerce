@@ -6,6 +6,7 @@ from .views import (
     ProductListView,
     ProductDetailView,
     RelatedProductsView,
+    ProductReviewCreateView,
 )
 
 urlpatterns = [
@@ -18,5 +19,11 @@ urlpatterns = [
         "products/<slug:slug>/related/",
         RelatedProductsView.as_view(),
         name="product-related",
+    ),
+    # POST a new review for a specific product
+    path(
+        "products/<slug:slug>/reviews/",
+        ProductReviewCreateView.as_view(),
+        name="product-review-create",
     ),
 ]
