@@ -292,6 +292,32 @@ export const dashboardAPI = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CHAT  →  /api/chat/
+// ═══════════════════════════════════════════════════════════════════════════
+export const chatAPI = {
+  /**
+   * GET /api/chat/room/
+   * Returns the customer's current active room, or 404.
+   */
+  getMyRoom: () => api.get('/chat/room/'),
+
+  /**
+   * POST /api/chat/room/
+   * Body: { subject?: string }
+   * Creates a new support room for the current customer.
+   */
+  createRoom: (subject = '') =>
+    api.post('/chat/room/', { subject }),
+
+  /**
+   * GET /api/chat/room/<roomId>/messages/
+   * Fetches message history and marks messages as read.
+   */
+  getRoomMessages: (roomId) =>
+    api.get(`/chat/room/${roomId}/messages/`),
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ADMIN DASHBOARD  →  /api/dashboard/admin/
 // ═══════════════════════════════════════════════════════════════════════════
 export const adminAPI = {
@@ -349,6 +375,25 @@ export const adminAPI = {
   // Contact messages
   getMessages: (params = {}) => api.get('/dashboard/admin/messages/', { params }),
   deleteMessage: (id) => api.delete(`/dashboard/admin/messages/${id}/`),
+
+  // ─── Chat (admin) ────────────────────────────────────────────────────────
+  /**
+   * GET /api/chat/admin/rooms/
+   * params: { status?: 'open' | 'assigned' | 'closed' }
+   */
+  getChatRooms: (params = {}) => api.get('/chat/admin/rooms/', { params }),
+
+  /**
+   * GET /api/chat/room/<roomId>/messages/
+   * Fetches message history for admin view.
+   */
+  getChatRoomMessages: (roomId) => api.get(`/chat/room/${roomId}/messages/`),
+
+  /**
+   * PATCH /api/chat/admin/rooms/<id>/
+   * Body: { status?: string, agent?: number }
+   */
+  updateChatRoom: (roomId, data) => api.patch(`/chat/admin/rooms/${roomId}/`, data),
 };
 
 export default api;

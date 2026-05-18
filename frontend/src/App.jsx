@@ -9,6 +9,7 @@ import { WishlistProvider } from './context/WishlistContext';
 // ─── Shared layout pieces ─────────────────────────────────────────────────
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ChatWidget from './components/ChatWidget';
 
 // ─── Admin layout ─────────────────────────────────────────────────────────
 import AdminLayout from './components/admin/AdminLayout';
@@ -23,6 +24,7 @@ import AdminBrands from './pages/admin/AdminBrands';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminMessages from './pages/admin/AdminMessages';
+import AdminChat from './pages/admin/AdminChat';
 
 // ─── Storefront pages ─────────────────────────────────────────────────────
 import Home from './pages/Home';
@@ -59,6 +61,7 @@ import { useAuth } from './context/AuthContext';
 
 /**
  * MainLayout — renders the shared Header + Footer around every non-admin page.
+ * ChatWidget is mounted here, appearing on all storefront pages.
  * Admin pages use AdminLayout and must NOT render the storefront Header/Footer.
  */
 const MainLayout = () => (
@@ -68,6 +71,7 @@ const MainLayout = () => (
       <Outlet />
     </main>
     <Footer />
+    <ChatWidget />
   </>
 );
 
@@ -190,6 +194,7 @@ function App() {
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="reviews" element={<AdminReviews />} />
                 <Route path="messages" element={<AdminMessages />} />
+                <Route path="chat" element={<AdminChat />} />
                 {/* Unknown /admin/* → back to overview */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>
