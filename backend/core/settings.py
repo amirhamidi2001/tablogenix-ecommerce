@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "django_filters",
+    "channels",
     # Local
     "accounts.apps.AccountsConfig",
     "contact.apps.ContactConfig",
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
     "cart.apps.CartConfig",
     "order.apps.OrderConfig",
     "dashboard.apps.DashboardConfig",
+    "chat.apps.ChatConfig",
 ]
 
 MIDDLEWARE = [
@@ -202,3 +204,24 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# ── ASGI application (replaces implicit WSGI_APPLICATION for Channels) ────
+ASGI_APPLICATION = "core.asgi.application"
+
+# ── Channel layers — Redis backend ────────────────────────────────────────
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                (
+                    config("REDIS_HOST", default="127.0.0.1"),
+                    int(config("REDIS_PORT", default=6379)),
+                )
+            ],
+            # Optional tuning — adjust for your load
+            "capacity": 1500,
+            "expiry": 10,
+        },
+    }
+}
