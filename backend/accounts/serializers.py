@@ -1,3 +1,6 @@
+import re
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.utils.encoding import force_str
@@ -15,20 +18,29 @@ User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
+    first_name = serializers.CharField(required=True, write_only=True)
+    last_name = serializers.CharField(required=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ["email", "password"]
+        fields = ["email", "password", "first_name", "last_name"]
 
     def validate_password(self, value):
         validate_password(value)
         return value
 
     def create(self, validated_data):
+        first_name = validated_data.pop("first_name")
+        last_name = validated_data.pop("last_name")
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
         )
+        # Update the auto-created profile
+        profile = user.profile
+        profile.first_name = first_name
+        profile.last_name = last_name
+        profile.save(update_fields=["first_name", "last_name"])
         return user
 
 
@@ -65,6 +77,13 @@ class ProfileSerializer(serializers.ModelSerializer):
                 request.build_absolute_uri(obj.image.url) if request else obj.image.url
             )
         return None
+
+    def validate_phone_number(self, value):
+        if value:
+            # Basic phone number validation – adapt regex to your requirements
+            if not re.match(r"^\+?1?\d{9,15}$", value):
+                raise serializers.ValidationError("Enter a valid phone number.")
+        return value
 
 
 # ─── Current user (used by GET /api/auth/user/) ───────────────────────────────
@@ -142,7 +161,11 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"confirm_password": "Passwords do not match."}
             )
-        validate_password(attrs["new_password"], self.context["request"].user)
+        user = self.context["request"].user
+        try:
+            validate_password(attrs["new_password"], user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"new_password": e.messages})
         return attrs
 
     def save(self, **kwargs):

@@ -157,7 +157,7 @@ const SettingsTab = () => {
 
     setPwLoading(true);
     try {
-      await api.post('/accounts/change-password/', pwData);
+      await api.post('/auth/change-password/', pwData);
       setPwAlert({ type: 'success', msg: 'Password updated successfully.' });
       setPwData({ current_password: '', new_password: '', confirm_password: '' });
     } catch (err) {

@@ -171,7 +171,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
 class ChangePasswordView(APIView):
     """
-    POST /api/accounts/change-password/
+    POST /api/auth/change-password/
     Body: { current_password, new_password, confirm_password }
     """
 

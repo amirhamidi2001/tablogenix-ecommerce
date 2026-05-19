@@ -47,8 +47,8 @@ const ChangePassword = () => {
 
     setIsLoading(true);
     try {
-      // POST /api/accounts/change-password/
-      await api.post('/accounts/change-password/', {
+      // POST /api/auth/change-password/
+      await api.post('/auth/change-password/', {
         current_password: formData.currentPassword,
         new_password:     formData.newPassword,
         confirm_password: formData.confirmPassword,
