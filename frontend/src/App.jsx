@@ -51,6 +51,8 @@ import SearchResults from './pages/SearchResults';
 import ShippingInfo from './pages/ShippingInfo';
 import Support from './pages/Support';
 import Tos from './pages/Tos';
+import Blog from './pages/Blog';
+import BlogDetails from './pages/BlogDetails';
 
 // ─── Auth hook ────────────────────────────────────────────────────────────
 import { useAuth } from './context/AuthContext';
@@ -163,6 +165,8 @@ function App() {
                 <Route path="/shipping-info" element={<ShippingInfo />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/tos" element={<Tos />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogDetails />} />
 
                 {/* Guest-only (redirect to /account when logged in) */}
                 <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />

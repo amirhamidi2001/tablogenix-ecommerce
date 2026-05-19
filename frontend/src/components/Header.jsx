@@ -378,15 +378,7 @@ const Header = () => {
             <li><NavLink to="/category" className="block py-3 hover:text-teal-400">Category</NavLink></li>
             <li><NavLink to="/cart" className="block py-3 hover:text-teal-400">Cart</NavLink></li>
             <li><NavLink to="/checkout" className="block py-3 hover:text-teal-400">Checkout</NavLink></li>
-            <li className="relative group">
-              <button className="py-3 hover:text-teal-400 flex items-center gap-1">
-                Dropdown <i className="bi bi-chevron-down text-xs" />
-              </button>
-              <ul className="absolute left-0 mt-0 w-48 bg-white text-emerald-800 shadow-lg rounded-b hidden group-hover:block z-10">
-                <li><a href="#" className="block px-4 py-2 hover:bg-emerald-100">Dropdown 1</a></li>
-                <li><a href="#" className="block px-4 py-2 hover:bg-emerald-100">Dropdown 2</a></li>
-              </ul>
-            </li>
+            <li><NavLink to="/blog" className="block py-3 hover:text-teal-400">Blog</NavLink></li>
             <li><NavLink to="/contact" className="block py-3 hover:text-teal-400">Contact</NavLink></li>
           </ul>
         </div>
@@ -408,17 +400,7 @@ const Header = () => {
             <li><Link to="/category" onClick={closeMobile} className="block text-emerald-800">Category</Link></li>
             <li><Link to="/cart" onClick={closeMobile} className="block text-emerald-800">Cart</Link></li>
             <li><Link to="/checkout" onClick={closeMobile} className="block text-emerald-800">Checkout</Link></li>
-            <li>
-              <details className="group">
-                <summary className="cursor-pointer list-none flex justify-between items-center text-emerald-800">
-                  Dropdown <i className="bi bi-chevron-down group-open:rotate-180 transition" />
-                </summary>
-                <ul className="pl-4 mt-2 space-y-2">
-                  <li><a href="#" className="block text-emerald-600">Dropdown 1</a></li>
-                  <li><a href="#" className="block text-emerald-600">Dropdown 2</a></li>
-                </ul>
-              </details>
-            </li>
+            <li><Link to="/blog" onClick={closeMobile} className="block text-emerald-800">Blog</Link></li>
             <li><Link to="/contact" onClick={closeMobile} className="block text-emerald-800">Contact</Link></li>
           </ul>
         </div>
