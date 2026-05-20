@@ -103,7 +103,11 @@ class Order(models.Model):
 
     @property
     def full_name(self):
-        return f"{self.first_name} {self.last_name}".strip()
+        first = self.first_name.strip()
+        last = self.last_name.strip()
+        if first and last:
+            return f"{first} {last}"
+        return first or last
 
     @property
     def shipping_address_display(self):
