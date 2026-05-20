@@ -7,6 +7,7 @@ cffi==2.0.0
 channels==4.3.2
 channels_redis==4.3.0
 constantly==23.10.4
+coverage==7.14.0
 cryptography==48.0.0
 daphne==4.2.1
 Django==5.2.11
@@ -16,6 +17,8 @@ djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.29.0
 drf-yasg==1.21.14
+factory_boy==3.3.3
+Faker==40.18.0
 gunicorn==25.0.3
 hyperlink==21.0.0
 idna==3.15
@@ -38,6 +41,7 @@ Pygments==2.20.0
 PyJWT==2.11.0
 pyOpenSSL==26.2.0
 pytest==9.0.3
+pytest-cov==7.1.0
 pytest-django==4.12.0
 python-decouple==3.8
 pytz==2025.2
