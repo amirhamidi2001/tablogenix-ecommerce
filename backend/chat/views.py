@@ -1,3 +1,4 @@
+from django.http import Http404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -79,15 +80,18 @@ class RoomMessagesView(generics.ListAPIView):
         user = self.request.user
         is_staff = user.is_staff or getattr(user, "type", 1) in (2, 3)
 
-        if is_staff:
-            qs = ChatMessage.objects.filter(room_id=room_id)
-        else:
-            qs = ChatMessage.objects.filter(
-                room_id=room_id,
-                room__customer=user,
-            )
+        # Check room existence and ownership for non‑staff users
+        try:
+            room = ChatRoom.objects.get(id=room_id)
+        except ChatRoom.DoesNotExist:
+            raise Http404("No ChatRoom matches the given query.")
 
-        # Side-effect: mark the other party's messages as read
+        if not is_staff and room.customer != user:
+            raise Http404("No ChatRoom matches the given query.")
+
+        qs = ChatMessage.objects.filter(room=room)
+
+        # Mark the other party's messages as read
         qs.filter(is_read=False).exclude(sender=user).update(is_read=True)
         return qs.select_related("sender").order_by("created_at")
 
