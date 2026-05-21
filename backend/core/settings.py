@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "order.apps.OrderConfig",
     "dashboard.apps.DashboardConfig",
     "chat.apps.ChatConfig",
+    "blog.apps.BlogConfig",
 ]
 
 MIDDLEWARE = [

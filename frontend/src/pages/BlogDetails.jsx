@@ -1,598 +1,491 @@
 // src/pages/BlogDetails.jsx
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { blogAPI, parseErrors } from "../services/api";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const FALLBACK_IMAGES = [
+  "/assets/img/person/person-f-1.webp",
+  "/assets/img/person/person-f-2.webp",
+  "/assets/img/person/person-f-3.webp",
+  "/assets/img/person/person-f-4.webp",
+];
+
+const getPostImage = (post, index = 0) =>
+  post?.cover_image_url || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+const formatTimeAgo = (dateStr) => {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days !== 1 ? "s" : ""} ago`;
+  return formatDate(dateStr);
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+const DetailSkeleton = () => (
+  <div className="animate-pulse space-y-6">
+    <div className="h-6 bg-gray-200 rounded w-1/4" />
+    <div className="h-10 bg-gray-200 rounded w-3/4" />
+    <div className="h-4 bg-gray-200 rounded w-1/2" />
+    <div className="h-80 bg-gray-200 rounded-lg" />
+    <div className="space-y-3">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="h-4 bg-gray-200 rounded" style={{ width: `${85 + (i % 3) * 5}%` }} />
+      ))}
+    </div>
+  </div>
+);
+
+const AvatarPlaceholder = ({ name, size = "md" }) => {
+  const sizeClass = size === "sm" ? "w-8 h-8 text-xs" : size === "lg" ? "w-14 h-14 text-xl" : "w-10 h-10 text-sm";
+  return (
+    <div className={`${sizeClass} rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold flex-shrink-0`}>
+      {name?.[0]?.toUpperCase() || "?"}
+    </div>
+  );
+};
+
+const CommentItem = ({ comment }) => (
+  <div className="pb-6">
+    <div className="flex gap-4">
+      {comment.author_avatar ? (
+        <img src={comment.author_avatar} alt={comment.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+      ) : (
+        <AvatarPlaceholder name={comment.name} />
+      )}
+      <div className="flex-1">
+        <div className="flex flex-wrap justify-between items-start mb-2">
+          <div>
+            <h4 className="font-bold text-gray-800">{comment.name}</h4>
+            <span className="text-xs text-gray-400">
+              <i className="bi bi-clock mr-1" />
+              {formatTimeAgo(comment.created_at)}
+            </span>
+          </div>
+        </div>
+        <p className="text-gray-600 mb-3 leading-relaxed">{comment.body}</p>
+
+        {/* Replies */}
+        {comment.replies?.length > 0 && (
+          <div className="mt-4 pl-6 border-l-2 border-gray-200 space-y-4">
+            {comment.replies.map((reply) => (
+              <div key={reply.id} className="flex gap-4">
+                <AvatarPlaceholder name={reply.name} size="sm" />
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-gray-800 text-sm">{reply.name}</h4>
+                      <span className="text-xs text-gray-400">
+                        {formatTimeAgo(reply.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-gray-600 text-sm mt-1 leading-relaxed">{reply.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+const RelatedPostCard = ({ post, index }) => (
+  <article className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition group">
+    <Link to={`/blog/${post.slug}`}>
+      <img
+        src={getPostImage(post, index)}
+        alt={post.title}
+        className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+      />
+    </Link>
+    <div className="p-4">
+      {post.category && (
+        <span className="text-teal-600 text-xs font-semibold">{post.category.name}</span>
+      )}
+      <h3 className="font-bold text-gray-800 mt-1 line-clamp-2 leading-snug">
+        <Link to={`/blog/${post.slug}`} className="hover:text-teal-600 transition">
+          {post.title}
+        </Link>
+      </h3>
+      <p className="text-xs text-gray-400 mt-2">
+        {formatDate(post.published_at || post.created_at)}
+      </p>
+    </div>
+  </article>
+);
+
+// ─── Initial form state ───────────────────────────────────────────────────────
+
+const EMPTY_FORM = { name: "", email: "", website: "", body: "" };
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 const BlogDetails = () => {
-  const [commentForm, setCommentForm] = useState({
-    name: "",
-    email: "",
-    website: "",
-    comment: "",
-  });
+  const { slug } = useParams();
+  const navigate = useNavigate();
+
+  // ── State ──
+  const [post, setPost] = useState(null);
+  const [relatedPosts, setRelatedPosts] = useState([]);
+  const [comments, setComments] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  const [commentForm, setCommentForm] = useState(EMPTY_FORM);
+  const [commentErrors, setCommentErrors] = useState({});
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentSuccess, setCommentSuccess] = useState(false);
+
+  const commentFormRef = useRef(null);
+
+  // ── Fetchers ──
+
+  const fetchPost = useCallback(async () => {
+    setLoading(true);
+    setNotFound(false);
+    try {
+      const { data } = await blogAPI.getPost(slug);
+      setPost(data);
+      setComments(data.comments || []);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setNotFound(true);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [slug]);
+
+  const fetchRelated = useCallback(async () => {
+    try {
+      const { data } = await blogAPI.getRelatedPosts(slug);
+      setRelatedPosts(data.results || data || []);
+    } catch {
+      setRelatedPosts([]);
+    }
+  }, [slug]);
+
+  // ── Effects ──
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    fetchPost();
+    fetchRelated();
+  }, [slug, fetchPost, fetchRelated]);
+
+  // ── Comment handlers ──
 
   const handleCommentChange = (e) => {
-    setCommentForm({ ...commentForm, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setCommentForm((prev) => ({ ...prev, [name]: value }));
+    if (commentErrors[name]) {
+      setCommentErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
   };
 
-  const handleCommentSubmit = (e) => {
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    console.log("Comment submitted:", commentForm);
+    setCommentSubmitting(true);
+    setCommentErrors({});
+    setCommentSuccess(false);
+
+    try {
+      const payload = {
+        name: commentForm.name.trim(),
+        email: commentForm.email.trim(),
+        body: commentForm.body.trim(),
+        ...(commentForm.website.trim() ? { website: commentForm.website.trim() } : {}),
+      };
+      const { data } = await blogAPI.createComment(slug, payload);
+
+      // Append the new comment optimistically
+      setComments((prev) => [
+        ...prev,
+        { ...data, replies: [] },
+      ]);
+      setCommentForm(EMPTY_FORM);
+      setCommentSuccess(true);
+
+      // Auto-hide success after 4 s
+      setTimeout(() => setCommentSuccess(false), 4000);
+    } catch (err) {
+      setCommentErrors(parseErrors(err));
+    } finally {
+      setCommentSubmitting(false);
+    }
   };
+
+  const scrollToCommentForm = () => {
+    commentFormRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // ── Render: loading ──
+
+  if (loading) {
+    return (
+      <main className="bg-white">
+        <div className="bg-gray-50 py-8 border-b">
+          <div className="container mx-auto px-4 animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/3" />
+          </div>
+        </div>
+        <section className="py-12">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <DetailSkeleton />
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  // ── Render: 404 ──
+
+  if (notFound || !post) {
+    return (
+      <main className="bg-white min-h-[60vh] flex items-center justify-center">
+        <div className="text-center px-4">
+          <i className="bi bi-journal-x text-6xl text-gray-300 block mb-4" />
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">Post not found</h2>
+          <p className="text-gray-500 mb-6">
+            This post may have been removed or is not yet published.
+          </p>
+          <Link
+            to="/blog"
+            className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition"
+          >
+            Back to Blog
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // ── Render: post ──
 
   return (
     <main className="bg-white">
-      <div className="bg-gray-100 py-12">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 md:mb-0">
-            Blog Details
-          </h1>
+      {/* ── Breadcrumb ──────────────────────────────────────────────── */}
+      <div className="bg-gray-50 py-8 border-b">
+        <div className="container mx-auto px-4">
           <nav className="text-sm">
-            <ol className="flex space-x-2">
+            <ol className="flex flex-wrap items-center gap-2">
               <li>
-                <a href="/" className="text-gray-500 hover:text-blue-600">
+                <Link to="/" className="text-gray-500 hover:text-teal-600">
                   Home
-                </a>
+                </Link>
               </li>
-              <li className="text-gray-700">/</li>
-              <li className="text-gray-900 font-semibold">Blog Details</li>
+              <li className="text-gray-400">/</li>
+              <li>
+                <Link to="/blog" className="text-gray-500 hover:text-teal-600">
+                  Blog
+                </Link>
+              </li>
+              <li className="text-gray-400">/</li>
+              <li className="text-gray-800 font-semibold truncate max-w-[240px]">
+                {post.title}
+              </li>
             </ol>
           </nav>
         </div>
       </div>
 
-      {/* Blog Details Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <article className="max-w-5xl mx-auto">
-            {/* Article Header */}
-            <div className="mb-8">
-              <div className="flex flex-wrap gap-2 mb-4">
-                <a href="#" className="text-blue-600 text-sm font-semibold">
-                  Technology
-                </a>
-                <a href="#" className="text-blue-600 text-sm font-semibold">
-                  Innovation
-                </a>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                The Evolution of User Interface Design: From Skeuomorphism to
-                Neumorphism
-              </h1>
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <img
-                    src="/assets/img/person/person-f-1.webp"
-                    alt="Author"
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <h4 className="font-bold text-gray-800">David Wilson</h4>
-                    <span className="text-sm text-gray-500">
-                      UI/UX Design Lead
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                  <span>
-                    <i className="bi bi-calendar4-week mr-1"></i> April 15, 2025
-                  </span>
-                  <span>
-                    <i className="bi bi-clock mr-1"></i> 10 min read
-                  </span>
-                  <span>
-                    <i className="bi bi-chat-square-text mr-1"></i> 32 Comments
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Featured Image */}
-            <div className="mb-12">
-              <img
-                src="/assets/img/person/person-f-2.webp"
-                alt="UI Design Evolution"
-                className="w-full rounded-lg shadow-md"
-              />
-            </div>
-
-            {/* Article Wrapper (Table of Contents + Content) */}
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Table of Contents - Sidebar */}
-              <aside className="lg:w-1/3">
-                <div className="sticky top-24 bg-gray-50 p-5 rounded-lg border border-gray-200">
-                  <h3 className="text-xl font-bold mb-4">Table of Contents</h3>
-                  <nav>
-                    <ul className="space-y-2">
-                      <li>
-                        <a
-                          href="#introduction"
-                          className="text-blue-600 font-medium"
-                        >
-                          Introduction
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#skeuomorphism" className="text-gray-600 hover:text-blue-600">
-                          The Skeuomorphic Era
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#flat-design" className="text-gray-600 hover:text-blue-600">
-                          Flat Design Revolution
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#material-design" className="text-gray-600 hover:text-blue-600">
-                          Material Design
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#neumorphism" className="text-gray-600 hover:text-blue-600">
-                          Rise of Neumorphism
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#future" className="text-gray-600 hover:text-blue-600">
-                          Future Trends
-                        </a>
-                      </li>
-                    </ul>
-                  </nav>
-                </div>
-              </aside>
-
-              {/* Main Content Area */}
-              <div className="lg:w-2/3 space-y-12">
-                {/* Introduction */}
-                <section id="introduction">
-                  <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                    The journey of user interface design has been marked by
-                    significant shifts in aesthetic approaches, each era
-                    bringing its own unique perspective on how digital
-                    interfaces should look and feel.
-                  </p>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    From the early days of graphical user interfaces to today's
-                    sophisticated design systems, the evolution of UI design
-                    reflects not just technological advancement, but also
-                    changing user expectations and cultural shifts in how we
-                    interact with digital products.
-                  </p>
-                  <div className="bg-gray-50 border-l-4 border-blue-500 p-5 italic mb-8">
-                    <blockquote>
-                      <p className="text-gray-700">
-                        "Design is not just what it looks like and feels like.
-                        Design is how it works."
-                      </p>
-                      <cite className="text-sm text-gray-500 block mt-2">
-                        Steve Jobs
-                      </cite>
-                    </blockquote>
-                  </div>
-                </section>
-
-                {/* Skeuomorphic Era */}
-                <section id="skeuomorphism">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    The Skeuomorphic Era
-                  </h2>
-                  <div className="float-right ml-6 mb-4 w-64">
-                    <img
-                      src="/assets/img/person/person-f-3.webp"
-                      alt="Skeuomorphic Design Example"
-                      className="rounded-lg shadow"
-                    />
-                    <figcaption className="text-xs text-gray-400 mt-1 text-center">
-                      Early iOS design showcasing skeuomorphic elements
-                    </figcaption>
-                  </div>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    Skeuomorphic design dominated the early years of digital
-                    interfaces, attempting to mirror real-world objects in
-                    digital form. This approach helped users transition from
-                    physical to digital interactions through familiar visual
-                    metaphors.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-                    <div className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                      <i className="bi bi-layers text-2xl text-blue-500"></i>
-                      <div>
-                        <h4 className="font-bold">Realistic Textures</h4>
-                        <p className="text-sm text-gray-600">
-                          Detailed representations of materials like leather,
-                          metal, and paper
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                      <i className="bi bi-lightbulb text-2xl text-blue-500"></i>
-                      <div>
-                        <h4 className="font-bold">Familiar Metaphors</h4>
-                        <p className="text-sm text-gray-600">
-                          Digital elements mimicking their physical counterparts
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Flat Design Revolution */}
-                <section id="flat-design">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    The Flat Design Revolution
-                  </h2>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    As users became more comfortable with digital interfaces,
-                    design began moving towards simplification. Flat design
-                    emerged as a reaction to the ornate details of
-                    skeuomorphism, emphasizing clarity and efficiency.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
-                    <div className="border rounded-lg p-5 shadow-sm">
-                      <div className="text-green-500 mb-2">
-                        <i className="bi bi-check-circle text-2xl"></i>
-                      </div>
-                      <h4 className="font-bold text-lg mb-2">Advantages</h4>
-                      <ul className="list-disc list-inside space-y-1 text-gray-600">
-                        <li>Improved loading times</li>
-                        <li>Better scalability</li>
-                        <li>Cleaner visual hierarchy</li>
-                      </ul>
-                    </div>
-                    <div className="border rounded-lg p-5 shadow-sm">
-                      <div className="text-red-500 mb-2">
-                        <i className="bi bi-exclamation-circle text-2xl"></i>
-                      </div>
-                      <h4 className="font-bold text-lg mb-2">Challenges</h4>
-                      <ul className="list-disc list-inside space-y-1 text-gray-600">
-                        <li>Reduced visual cues</li>
-                        <li>Potential usability issues</li>
-                        <li>Limited depth perception</li>
-                      </ul>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Material Design */}
-                <section id="material-design">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Material Design: Finding Balance
-                  </h2>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    Google's Material Design emerged as a comprehensive design
-                    system that combined the simplicity of flat design with
-                    subtle depth cues, creating a more intuitive user experience
-                    while maintaining modern aesthetics.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
-                    <div className="text-center p-4 border rounded-lg">
-                      <span className="text-3xl font-bold text-blue-600 block mb-2">
-                        01
-                      </span>
-                      <h4 className="font-bold">Physical Properties</h4>
-                      <p className="text-sm text-gray-600">
-                        Surfaces and edges provide meaningful interaction cues
-                      </p>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <span className="text-3xl font-bold text-blue-600 block mb-2">
-                        02
-                      </span>
-                      <h4 className="font-bold">Bold Graphics</h4>
-                      <p className="text-sm text-gray-600">
-                        Deliberate color choices and intentional white space
-                      </p>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <span className="text-3xl font-bold text-blue-600 block mb-2">
-                        03
-                      </span>
-                      <h4 className="font-bold">Meaningful Motion</h4>
-                      <p className="text-sm text-gray-600">
-                        Animation informs and reinforces user actions
-                      </p>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Neumorphism */}
-                <section id="neumorphism">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    The Rise of Neumorphism
-                  </h2>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    Neumorphism represents the latest evolution in UI design,
-                    combining aspects of skeuomorphism with modern minimal
-                    aesthetics. This style creates soft, extruded surfaces that
-                    appear to emerge from the background.
-                  </p>
-                  <div className="flex gap-4 p-5 bg-blue-50 rounded-lg border border-blue-200">
-                    <i className="bi bi-info-circle text-2xl text-blue-600"></i>
-                    <div>
-                      <h4 className="font-bold text-gray-800">
-                        Key Characteristics
-                      </h4>
-                      <p className="text-gray-600">
-                        Neumorphic design relies on subtle shadow work to create
-                        the illusion of elements either protruding from or being
-                        pressed into their background surface.
-                      </p>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Future Trends */}
-                <section id="future">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Looking to the Future
-                  </h2>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    As we look ahead, UI design continues to evolve with new
-                    technologies and user expectations. The future may bring more
-                    personalized, adaptive interfaces that respond to individual
-                    user preferences and contexts.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
-                    <div className="text-center p-4">
-                      <i className="bi bi-phone text-4xl text-blue-500 block mb-3"></i>
-                      <h4 className="font-bold">Adaptive Interfaces</h4>
-                      <p className="text-sm text-gray-600">
-                        Interfaces that automatically adjust based on user
-                        behavior
-                      </p>
-                    </div>
-                    <div className="text-center p-4">
-                      <i className="bi bi-eye text-4xl text-blue-500 block mb-3"></i>
-                      <h4 className="font-bold">Immersive Experiences</h4>
-                      <p className="text-sm text-gray-600">
-                        Integration of AR and VR elements in everyday interfaces
-                      </p>
-                    </div>
-                    <div className="text-center p-4">
-                      <i className="bi bi-hand-index text-4xl text-blue-500 block mb-3"></i>
-                      <h4 className="font-bold">Gesture Controls</h4>
-                      <p className="text-sm text-gray-600">
-                        Advanced motion and gesture-based interactions
-                      </p>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            {/* Article Footer: Share & Tags */}
-            <div className="mt-16 pt-8 border-t border-gray-200">
-              <div className="mb-8">
-                <h4 className="text-lg font-bold mb-4">Share this article</h4>
-                <div className="flex flex-wrap gap-3">
-                  <a
-                    href="#"
-                    className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full hover:bg-gray-800 transition"
-                  >
-                    <i className="bi bi-twitter-x"></i> Share on X
-                  </a>
-                  <a
-                    href="#"
-                    className="flex items-center gap-2 bg-blue-700 text-white px-4 py-2 rounded-full hover:bg-blue-800 transition"
-                  >
-                    <i className="bi bi-facebook"></i> Share on Facebook
-                  </a>
-                  <a
-                    href="#"
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition"
-                  >
-                    <i className="bi bi-linkedin"></i> Share on LinkedIn
-                  </a>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-lg font-bold mb-4">Related Topics</h4>
-                <div className="flex flex-wrap gap-2">
-                  {["UI Design", "User Experience", "Design Trends", "Innovation", "Technology"].map(
-                    (tag) => (
-                      <a
-                        key={tag}
-                        href="#"
-                        className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-200 transition"
-                      >
-                        {tag}
-                      </a>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      {/* Comments Section */}
-      <section className="py-16 bg-gray-50">
+      {/* ── Post Header ─────────────────────────────────────────────── */}
+      <section className="py-12">
         <div className="container mx-auto px-4 max-w-4xl">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold">Community Feedback</h3>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-blue-600">12</span>
-                <span className="text-gray-500">Comments</span>
+          {/* Category + meta */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            {post.category && (
+              <Link
+                to={`/blog?category=${post.category.slug}`}
+                className="bg-teal-600 text-white text-xs font-semibold px-3 py-1 rounded hover:bg-teal-700 transition"
+              >
+                {post.category.name}
+              </Link>
+            )}
+            <span className="text-gray-400 text-sm flex items-center gap-1">
+              <i className="bi bi-clock" />
+              {post.read_time} min read
+            </span>
+            <span className="text-gray-400 text-sm flex items-center gap-1">
+              <i className="bi bi-eye" />
+              {post.views_count.toLocaleString()} views
+            </span>
+            <button
+              onClick={scrollToCommentForm}
+              className="text-gray-400 text-sm flex items-center gap-1 hover:text-teal-600 transition"
+            >
+              <i className="bi bi-chat" />
+              {comments.length} comment{comments.length !== 1 ? "s" : ""}
+            </button>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">
+            {post.title}
+          </h1>
+
+          {/* Author + date */}
+          {post.author && (
+            <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
+              {post.author.avatar ? (
+                <img
+                  src={post.author.avatar}
+                  alt={post.author.full_name}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <AvatarPlaceholder name={post.author.full_name} size="lg" />
+              )}
+              <div>
+                <p className="font-semibold text-gray-800">{post.author.full_name}</p>
+                <p className="text-sm text-gray-400">
+                  {formatDate(post.published_at || post.created_at)}
+                </p>
               </div>
             </div>
+          )}
 
-            {/* Comment Thread */}
-            <div className="space-y-6">
-              {/* Main Comment */}
-              <div className="border-b border-gray-100 pb-6">
-                <div className="flex gap-4">
-                  <img
-                    src="/assets/img/person/person-f-4.webp"
-                    alt="Avatar"
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-wrap justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-bold text-gray-800">
-                          Thomas Anderson
-                        </h4>
-                        <span className="text-xs text-gray-400">
-                          <i className="bi bi-clock mr-1"></i> 2 hours ago
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-500">
-                        <i className="bi bi-heart mr-1"></i> 24
-                      </span>
-                    </div>
-                    <p className="text-gray-600 mb-3">
-                      Nullam ac urna eu felis dapibus condimentum sit amet a
-                      augue. Sed non neque elit. Sed ut imperdiet nisi. Proin
-                      condimentum fermentum nunc.
-                    </p>
-                    <div className="flex gap-4 text-sm">
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-red-500">
-                        <i className="bi bi-heart"></i> Like
-                      </button>
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-blue-600">
-                        <i className="bi bi-chat"></i> Reply
-                      </button>
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-green-600">
-                        <i className="bi bi-share"></i> Share
-                      </button>
-                    </div>
-
-                    {/* Replies */}
-                    <div className="mt-4 pl-6 border-l-2 border-gray-200 space-y-4">
-                      <div className="flex gap-4">
-                        <img
-                          src="/assets/img/person/person-f-5.webp"
-                          alt="Avatar"
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-bold text-gray-800">
-                                Maria Rodriguez
-                              </h4>
-                              <span className="text-xs text-gray-400">
-                                1 hour ago
-                              </span>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              <i className="bi bi-heart mr-1"></i> 8
-                            </span>
-                          </div>
-                          <p className="text-gray-600 text-sm mt-1">
-                            Vivamus elementum semper nisi. Aenean vulputate
-                            eleifend tellus.
-                          </p>
-                          <div className="flex gap-4 text-sm mt-2">
-                            <button className="flex items-center gap-1 text-gray-500 hover:text-red-500">
-                              <i className="bi bi-heart"></i> Like
-                            </button>
-                            <button className="flex items-center gap-1 text-gray-500 hover:text-blue-600">
-                              <i className="bi bi-chat"></i> Reply
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-4">
-                        <img
-                          src="/assets/img/person/person-f-6.webp"
-                          alt="Avatar"
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-bold text-gray-800">
-                                Alex Chen
-                              </h4>
-                              <span className="text-xs text-gray-400">
-                                30 minutes ago
-                              </span>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              <i className="bi bi-heart mr-1"></i> 5
-                            </span>
-                          </div>
-                          <p className="text-gray-600 text-sm mt-1">
-                            Cras dapibus. Vivamus elementum semper nisi.
-                          </p>
-                          <div className="flex gap-4 text-sm mt-2">
-                            <button className="flex items-center gap-1 text-gray-500 hover:text-red-500">
-                              <i className="bi bi-heart"></i> Like
-                            </button>
-                            <button className="flex items-center gap-1 text-gray-500 hover:text-blue-600">
-                              <i className="bi bi-chat"></i> Reply
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Another Main Comment */}
-              <div className="pb-4">
-                <div className="flex gap-4">
-                  <img
-                    src="/assets/img/person/person-f-7.webp"
-                    alt="Avatar"
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-wrap justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-bold text-gray-800">
-                          Emily Watson
-                        </h4>
-                        <span className="text-xs text-gray-400">
-                          <i className="bi bi-clock mr-1"></i> 3 hours ago
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-500">
-                        <i className="bi bi-heart mr-1"></i> 15
-                      </span>
-                    </div>
-                    <p className="text-gray-600 mb-3">
-                      Maecenas tempus, tellus eget condimentum rhoncus, sem quam
-                      semper libero, sit amet adipiscing sem neque sed ipsum.
-                    </p>
-                    <div className="flex gap-4 text-sm">
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-red-500">
-                        <i className="bi bi-heart"></i> Like
-                      </button>
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-blue-600">
-                        <i className="bi bi-chat"></i> Reply
-                      </button>
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-green-600">
-                        <i className="bi bi-share"></i> Share
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Cover image */}
+          <div className="mb-8 rounded-xl overflow-hidden shadow-lg">
+            <img
+              src={getPostImage(post, 0)}
+              alt={post.title}
+              className="w-full max-h-[480px] object-cover"
+            />
           </div>
         </div>
       </section>
 
-      {/* Comment Form Section */}
-      <section className="py-16">
+      {/* ── Post Content ─────────────────────────────────────────────── */}
+      <section className="pb-12">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div
+            className="prose prose-lg prose-gray max-w-none
+              prose-headings:font-bold prose-headings:text-gray-900
+              prose-p:text-gray-700 prose-p:leading-relaxed
+              prose-a:text-teal-600 prose-a:no-underline hover:prose-a:underline
+              prose-blockquote:border-l-4 prose-blockquote:border-teal-500 prose-blockquote:pl-4
+              prose-blockquote:italic prose-blockquote:text-gray-600
+              prose-img:rounded-lg prose-img:shadow-md
+              prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded"
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+        </div>
+      </section>
+
+      {/* ── Author Bio ───────────────────────────────────────────────── */}
+      {post.author && (
+        <section className="py-10 bg-gray-50">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <div className="bg-white rounded-xl shadow-md p-6 flex flex-col sm:flex-row gap-5 items-start">
+              {post.author.avatar ? (
+                <img
+                  src={post.author.avatar}
+                  alt={post.author.full_name}
+                  className="w-20 h-20 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 text-3xl font-bold flex-shrink-0">
+                  {post.author.full_name?.[0]?.toUpperCase() || "?"}
+                </div>
+              )}
+              <div>
+                <p className="text-xs uppercase tracking-widest text-teal-600 font-semibold mb-1">
+                  About the Author
+                </p>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  {post.author.full_name}
+                </h3>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Related Posts ────────────────────────────────────────────── */}
+      {relatedPosts.length > 0 && (
+        <section className="py-12">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Related Posts</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {relatedPosts.map((related, i) => (
+                <RelatedPostCard key={related.id} post={related} index={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Comments List ────────────────────────────────────────────── */}
+      {comments.length > 0 && (
+        <section className="py-12 bg-gray-50">
+          <div className="container mx-auto px-4 max-w-3xl">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i className="bi bi-chat-square-text text-teal-600" />
+                {comments.length} Comment{comments.length !== 1 ? "s" : ""}
+              </h3>
+              <div className="divide-y divide-gray-100">
+                {comments.map((comment) => (
+                  <CommentItem key={comment.id} comment={comment} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Comment Form ─────────────────────────────────────────────── */}
+      <section className="py-16" ref={commentFormRef}>
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="mb-6">
-              <h3 className="text-2xl font-bold mb-2">Leave a Comment</h3>
+              <h3 className="text-2xl font-bold mb-1">Leave a Comment</h3>
               <p className="text-gray-500 text-sm">
-                Your email address will not be published. Required fields are
-                marked *
+                Your email address will not be published. Required fields are marked *
               </p>
             </div>
-            <form onSubmit={handleCommentSubmit}>
+
+            {/* Success banner */}
+            {commentSuccess && (
+              <div className="mb-5 bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 flex items-center gap-2">
+                <i className="bi bi-check-circle-fill" />
+                Your comment has been posted successfully!
+              </div>
+            )}
+
+            {/* Global error */}
+            {commentErrors.non_field_errors && (
+              <div className="mb-5 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+                {commentErrors.non_field_errors}
+              </div>
+            )}
+
+            <form onSubmit={handleCommentSubmit} noValidate>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name *
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -600,13 +493,21 @@ const BlogDetails = () => {
                     required
                     value={commentForm.name}
                     onChange={handleCommentChange}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter your full name"
+                    className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition ${commentErrors.name
+                        ? "border-red-400 bg-red-50"
+                        : "border-gray-300"
+                      }`}
                   />
+                  {commentErrors.name && (
+                    <p className="text-red-500 text-xs mt-1">{commentErrors.name}</p>
+                  )}
                 </div>
+
+                {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address *
+                    Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -614,11 +515,19 @@ const BlogDetails = () => {
                     required
                     value={commentForm.email}
                     onChange={handleCommentChange}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter your email address"
+                    className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition ${commentErrors.email
+                        ? "border-red-400 bg-red-50"
+                        : "border-gray-300"
+                      }`}
                   />
+                  {commentErrors.email && (
+                    <p className="text-red-500 text-xs mt-1">{commentErrors.email}</p>
+                  )}
                 </div>
               </div>
+
+              {/* Website */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Website
@@ -628,30 +537,56 @@ const BlogDetails = () => {
                   name="website"
                   value={commentForm.website}
                   onChange={handleCommentChange}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your website (optional)"
+                  placeholder="https://your-website.com (optional)"
+                  className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition ${commentErrors.website
+                      ? "border-red-400 bg-red-50"
+                      : "border-gray-300"
+                    }`}
                 />
+                {commentErrors.website && (
+                  <p className="text-red-500 text-xs mt-1">{commentErrors.website}</p>
+                )}
               </div>
+
+              {/* Comment body */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Comment *
+                  Your Comment <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  name="comment"
+                  name="body"
                   rows="5"
                   required
-                  value={commentForm.comment}
+                  value={commentForm.body}
                   onChange={handleCommentChange}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Write your thoughts here..."
-                ></textarea>
+                  className={`w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition resize-none ${commentErrors.body
+                      ? "border-red-400 bg-red-50"
+                      : "border-gray-300"
+                    }`}
+                />
+                {commentErrors.body && (
+                  <p className="text-red-500 text-xs mt-1">{commentErrors.body}</p>
+                )}
               </div>
-              <div className="text-center">
+
+              <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+                  disabled={commentSubmitting}
+                  className="bg-teal-600 text-white px-8 py-2.5 rounded-lg hover:bg-teal-700 transition font-medium text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Post Comment
+                  {commentSubmitting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Posting…
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-send" />
+                      Post Comment
+                    </>
+                  )}
                 </button>
               </div>
             </form>

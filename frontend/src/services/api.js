@@ -396,4 +396,49 @@ export const adminAPI = {
   updateChatRoom: (roomId, data) => api.patch(`/chat/admin/rooms/${roomId}/`, data),
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+// BLOG  →  /api/blog/
+// ═══════════════════════════════════════════════════════════════════════════
+export const blogAPI = {
+  /**
+   * GET /blog/posts/
+   * Supported params:
+   *   page, page_size, category (slug), is_featured, search, ordering
+   *   ordering values: created_at | -created_at | views_count | -views_count
+   */
+  getPosts: (params = {}) =>
+    api.get('/blog/posts/', { params }),
+
+  /**
+   * GET /blog/posts/<slug>/
+   * Returns full post data with content and approved comments.
+   * Also atomically increments the post's view counter server-side.
+   */
+  getPost: (slug) =>
+    api.get(`/blog/posts/${slug}/`),
+
+  /**
+   * GET /blog/posts/<slug>/related/
+   * Returns up to 3 published posts in the same category.
+   */
+  getRelatedPosts: (slug) =>
+    api.get(`/blog/posts/${slug}/related/`),
+
+  /**
+   * GET /blog/categories/
+   * Returns all categories that have at least one published post,
+   * annotated with post_count.
+   */
+  getCategories: () =>
+    api.get('/blog/categories/'),
+
+  /**
+   * POST /blog/posts/<slug>/comments/
+   * Body: { name, email, website?, body, parent? }
+   * No authentication required.
+   */
+  createComment: (slug, data) =>
+    api.post(`/blog/posts/${slug}/comments/`, data),
+};
+
 export default api;
