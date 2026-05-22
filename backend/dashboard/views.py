@@ -14,6 +14,11 @@ from accounts.models import Profile
 from contact.models import ContactMessage
 from order.models import Order
 from shop.models import Brand, Category, Product, Review
+from blog.models import (
+    Category as BlogCategory,
+    Post as BlogPost,
+    Comment as BlogComment,
+)
 
 from . import services
 from .filters import (
@@ -21,6 +26,9 @@ from .filters import (
     AdminProductFilter,
     AdminUserFilter,
     UserOrderFilter,
+    AdminPostFilter,
+    AdminCategoryFilter,
+    AdminCommentFilter,
 )
 from .models import Address, Wishlist
 from .permissions import IsAdminOrSuperuser, IsOwnerOrAdmin
@@ -45,6 +53,9 @@ from .serializers import (
     UserOrderListSerializer,
     UserReviewSerializer,
     WishlistSerializer,
+    BlogCategorySerializer,
+    AdminPostSerializer,
+    AdminCommentSerializer,
 )
 
 User = get_user_model()
@@ -475,3 +486,106 @@ class AdminContactMessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return ContactMessage.objects.all()
+
+
+# ─── Admin: Blog Categories ────────────────────────────────────────────────────
+
+
+class AdminBlogCategoryViewSet(viewsets.ModelViewSet):
+    """
+    Admin CRUD for blog categories.
+    GET    /dashboard/admin/blog/categories/
+    POST   /dashboard/admin/blog/categories/
+    PATCH  /dashboard/admin/blog/categories/{id}/
+    DELETE /dashboard/admin/blog/categories/{id}/
+    """
+
+    permission_classes = [IsAdminOrSuperuser]
+    pagination_class = DashboardPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = AdminCategoryFilter
+    search_fields = ["name"]
+    ordering_fields = ["name"]
+    ordering = ["name"]
+    serializer_class = BlogCategorySerializer
+
+    def get_queryset(self):
+        return BlogCategory.objects.prefetch_related("posts").all()
+
+
+# ─── Admin: Blog Posts ─────────────────────────────────────────────────────────
+
+
+class AdminBlogPostViewSet(viewsets.ModelViewSet):
+    """
+    Admin CRUD for blog posts.
+    GET    /dashboard/admin/blog/posts/
+    POST   /dashboard/admin/blog/posts/
+    PATCH  /dashboard/admin/blog/posts/{id}/
+    DELETE /dashboard/admin/blog/posts/{id}/
+    """
+
+    permission_classes = [IsAdminOrSuperuser]
+    pagination_class = DashboardPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = AdminPostFilter
+    search_fields = ["title", "excerpt", "content", "author__email", "category__name"]
+    ordering_fields = [
+        "created_at",
+        "updated_at",
+        "published_at",
+        "views_count",
+        "read_time",
+        "title",
+    ]
+    ordering = ["-created_at"]
+    serializer_class = AdminPostSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        return BlogPost.objects.select_related(
+            "author", "author__profile", "category"
+        ).prefetch_related("comments")
+
+    def perform_create(self, serializer):
+        # Auto-set author to current admin user
+        serializer.save(author=self.request.user)
+
+
+# ─── Admin: Blog Comments ──────────────────────────────────────────────────────
+
+
+class AdminBlogCommentViewSet(viewsets.ModelViewSet):
+    """
+    Admin comment moderation — list, approve/disapprove, delete.
+    GET    /dashboard/admin/blog/comments/
+    PATCH  /dashboard/admin/blog/comments/{id}/   (update is_approved)
+    DELETE /dashboard/admin/blog/comments/{id}/
+    """
+
+    permission_classes = [IsAdminOrSuperuser]
+    pagination_class = DashboardPagination
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = AdminCommentFilter
+    search_fields = ["name", "email", "body", "post__title"]
+    ordering_fields = ["created_at"]
+    ordering = ["-created_at"]
+    serializer_class = AdminCommentSerializer
+    http_method_names = ["get", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return BlogComment.objects.select_related("post", "parent").prefetch_related(
+            "replies"
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)

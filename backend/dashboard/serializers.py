@@ -8,6 +8,7 @@ from accounts.models import Profile
 from contact.models import ContactMessage
 from order.models import Order, OrderItem
 from shop.models import Brand, Category, Product, Review
+from blog.models import Comment, Post
 from .models import Address, Wishlist
 
 User = get_user_model()
@@ -612,3 +613,126 @@ class AdminContactMessageSerializer(serializers.ModelSerializer):
         model = ContactMessage
         fields = ["id", "name", "email", "subject", "message", "created_at"]
         read_only_fields = ["id", "created_at"]
+
+
+# ─── Admin: Blog Categories ────────────────────────────────────────────────────
+
+
+class BlogCategorySerializer(serializers.ModelSerializer):
+    posts_count = serializers.SerializerMethodField()
+
+    class Meta:
+        from blog.models import Category as BlogCategory
+
+        model = BlogCategory
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "posts_count",
+        ]
+        read_only_fields = ["id", "slug"]
+
+    def get_posts_count(self, obj):
+        return obj.posts.count()
+
+
+# ─── Admin: Blog Posts ────────────────────────────────────────────────────────
+
+
+class AdminPostSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    author_name = serializers.SerializerMethodField()
+    author_email = serializers.SerializerMethodField()
+    cover_image_url = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Post
+        fields = [
+            "id",
+            "title",
+            "slug",
+            "excerpt",
+            "content",
+            "cover_image",
+            "cover_image_url",
+            "author",
+            "author_name",
+            "author_email",
+            "category",
+            "category_name",
+            "status",
+            "is_featured",
+            "views_count",
+            "read_time",
+            "created_at",
+            "updated_at",
+            "published_at",
+            "comments_count",
+        ]
+        read_only_fields = [
+            "id",
+            "slug",
+            "views_count",
+            "read_time",
+            "created_at",
+            "updated_at",
+            "author_name",
+            "author_email",
+            "category_name",
+            "cover_image_url",
+            "comments_count",
+        ]
+
+    def get_author_name(self, obj):
+        if obj.author:
+            try:
+                return obj.author.profile.get_fullname() or obj.author.email
+            except Exception:
+                return obj.author.email
+        return None
+
+    def get_author_email(self, obj):
+        return obj.author.email if obj.author else None
+
+    def get_cover_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.cover_image and hasattr(obj.cover_image, "url"):
+            return (
+                request.build_absolute_uri(obj.cover_image.url)
+                if request
+                else obj.cover_image.url
+            )
+        return None
+
+    def get_comments_count(self, obj):
+        return obj.comments.count()
+
+
+# ─── Admin: Blog Comments ─────────────────────────────────────────────────────
+
+
+class AdminCommentSerializer(serializers.ModelSerializer):
+    post_title = serializers.CharField(source="post.title", read_only=True)
+    reply_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = [
+            "id",
+            "post",
+            "post_title",
+            "parent",
+            "name",
+            "email",
+            "website",
+            "body",
+            "is_approved",
+            "created_at",
+            "reply_count",
+        ]
+        read_only_fields = ["id", "created_at", "post_title", "reply_count"]
+
+    def get_reply_count(self, obj):
+        return obj.replies.count()

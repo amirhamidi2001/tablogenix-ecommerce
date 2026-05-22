@@ -25,6 +25,21 @@ router.register(r"admin/reviews", views.AdminReviewViewSet, basename="admin-revi
 router.register(
     r"admin/messages", views.AdminContactMessageViewSet, basename="admin-message"
 )
+router.register(
+    r"admin/blog/categories",
+    views.AdminBlogCategoryViewSet,
+    basename="admin-blog-category"
+)
+router.register(
+    r"admin/blog/posts",
+    views.AdminBlogPostViewSet,
+    basename="admin-blog-post"
+)
+router.register(
+    r"admin/blog/comments",
+    views.AdminBlogCommentViewSet,
+    basename="admin-blog-comment"
+)
 
 urlpatterns = [
     # ── User dashboard ────────────────────────────────────────────────────────

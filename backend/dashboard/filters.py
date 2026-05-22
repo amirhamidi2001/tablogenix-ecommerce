@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from order.models import Order
 from shop.models import Product, Review
 from contact.models import ContactMessage
+from blog.models import Category, Post, Comment
 
 User = get_user_model()
 
@@ -97,3 +98,68 @@ class UserOrderFilter(django_filters.FilterSet):
     class Meta:
         model = Order
         fields = ["status"]
+
+
+# ─── Admin: Blog Posts ─────────────────────────────────────────────────────────
+
+
+class AdminPostFilter(django_filters.FilterSet):
+    status = django_filters.ChoiceFilter(choices=Post.Status.choices)
+    category = django_filters.NumberFilter(field_name="category__id")
+    author = django_filters.NumberFilter(field_name="author__id")
+    is_featured = django_filters.BooleanFilter()
+    published_from = django_filters.DateFilter(
+        field_name="published_at", lookup_expr="date__gte"
+    )
+    published_to = django_filters.DateFilter(
+        field_name="published_at", lookup_expr="date__lte"
+    )
+    created_from = django_filters.DateFilter(
+        field_name="created_at", lookup_expr="date__gte"
+    )
+    created_to = django_filters.DateFilter(
+        field_name="created_at", lookup_expr="date__lte"
+    )
+
+    class Meta:
+        model = Post
+        fields = [
+            "status",
+            "category",
+            "author",
+            "is_featured",
+            "published_from",
+            "published_to",
+            "created_from",
+            "created_to",
+        ]
+
+
+# ─── Admin: Categories ─────────────────────────────────────────────────────────
+
+
+class AdminCategoryFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = Category
+        fields = ["name"]
+
+
+# ─── Admin: Comments ───────────────────────────────────────────────────────────
+
+
+class AdminCommentFilter(django_filters.FilterSet):
+    post = django_filters.NumberFilter(field_name="post__id")
+    is_approved = django_filters.BooleanFilter()
+    created_from = django_filters.DateFilter(
+        field_name="created_at", lookup_expr="date__gte"
+    )
+    created_to = django_filters.DateFilter(
+        field_name="created_at", lookup_expr="date__lte"
+    )
+    name = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = Comment
+        fields = ["post", "is_approved", "created_from", "created_to", "name"]
