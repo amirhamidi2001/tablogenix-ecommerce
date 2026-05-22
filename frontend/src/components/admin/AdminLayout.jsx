@@ -11,6 +11,8 @@ const NAV = [
   { label: "Brands", to: "/admin/brands", icon: "bi-award" },
   { label: "Users", to: "/admin/users", icon: "bi-people" },
   { label: "Reviews", to: "/admin/reviews", icon: "bi-star" },
+  { label: "Chats", to: "/admin/chat", icon: "bi-chat" },
+  { label: "Blog", to: "/admin/blog", icon: "bi-journal-text" },
   { label: "Messages", to: "/admin/messages", icon: "bi-envelope" },
 ];
 

@@ -25,6 +25,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminChat from './pages/admin/AdminChat';
+import AdminBlog from './pages/admin/AdminBlog';
 
 // ─── Storefront pages ─────────────────────────────────────────────────────
 import Home from './pages/Home';
@@ -199,6 +200,7 @@ function App() {
                 <Route path="reviews" element={<AdminReviews />} />
                 <Route path="messages" element={<AdminMessages />} />
                 <Route path="chat" element={<AdminChat />} />
+                <Route path="blog" element={<AdminBlog />} />
                 {/* Unknown /admin/* → back to overview */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Route>

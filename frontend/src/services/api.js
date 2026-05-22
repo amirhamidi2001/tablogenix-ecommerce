@@ -343,7 +343,7 @@ export const adminAPI = {
   }),
   deleteProduct: (id) => api.delete(`/dashboard/admin/products/${id}/`),
 
-  // Categories
+  // Categories (shop)
   getCategories: (params = {}) => api.get('/dashboard/admin/categories/', { params }),
   createCategory: (formData) => api.post('/dashboard/admin/categories/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -377,27 +377,53 @@ export const adminAPI = {
   deleteMessage: (id) => api.delete(`/dashboard/admin/messages/${id}/`),
 
   // ─── Chat (admin) ────────────────────────────────────────────────────────
-  /**
-   * GET /api/chat/admin/rooms/
-   * params: { status?: 'open' | 'assigned' | 'closed' }
-   */
   getChatRooms: (params = {}) => api.get('/chat/admin/rooms/', { params }),
-
-  /**
-   * GET /api/chat/room/<roomId>/messages/
-   * Fetches message history for admin view.
-   */
   getChatRoomMessages: (roomId) => api.get(`/chat/room/${roomId}/messages/`),
-
-  /**
-   * PATCH /api/chat/admin/rooms/<id>/
-   * Body: { status?: string, agent?: number }
-   */
   updateChatRoom: (roomId, data) => api.patch(`/chat/admin/rooms/${roomId}/`, data),
+
+  // ────────────────────────────────────────────────────────────────────────
+  // BLOG ADMIN (new)
+  // ────────────────────────────────────────────────────────────────────────
+  // Blog Categories
+  getBlogCategories: (params = {}) =>
+    api.get('/dashboard/admin/blog/categories/', { params }),
+  createBlogCategory: (formData) =>
+    api.post('/dashboard/admin/blog/categories/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  updateBlogCategory: (id, formData) =>
+    api.patch(`/dashboard/admin/blog/categories/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  deleteBlogCategory: (id) =>
+    api.delete(`/dashboard/admin/blog/categories/${id}/`),
+
+  // Blog Posts
+  getBlogPosts: (params = {}) =>
+    api.get('/dashboard/admin/blog/posts/', { params }),
+  getBlogPost: (id) => api.get(`/dashboard/admin/blog/posts/${id}/`),
+  createBlogPost: (formData) =>
+    api.post('/dashboard/admin/blog/posts/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  updateBlogPost: (id, formData) =>
+    api.patch(`/dashboard/admin/blog/posts/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  deleteBlogPost: (id) =>
+    api.delete(`/dashboard/admin/blog/posts/${id}/`),
+
+  // Blog Comments
+  getBlogComments: (params = {}) =>
+    api.get('/dashboard/admin/blog/comments/', { params }),
+  updateBlogComment: (id, data) =>
+    api.patch(`/dashboard/admin/blog/comments/${id}/`, data), // usually { is_approved: true/false }
+  deleteBlogComment: (id) =>
+    api.delete(`/dashboard/admin/blog/comments/${id}/`),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// BLOG  →  /api/blog/
+// BLOG  →  /api/blog/ (public)
 // ═══════════════════════════════════════════════════════════════════════════
 export const blogAPI = {
   /**
