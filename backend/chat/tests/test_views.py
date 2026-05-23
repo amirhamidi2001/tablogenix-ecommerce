@@ -1,24 +1,10 @@
-"""
-chat/tests/test_views.py
-
-Integration tests for the chat REST API:
-  GET  /api/chat/room/                    (customer — get active room)
-  POST /api/chat/room/                    (customer — open new room)
-  GET  /api/chat/room/<id>/messages/      (customer — message history)
-  GET  /api/chat/admin/rooms/             (admin — list rooms)
-  GET  /api/chat/admin/rooms/<id>/        (admin — room detail)
-  PATCH /api/chat/admin/rooms/<id>/       (admin — update status)
-"""
-
 import pytest
 from rest_framework import status
 from .conftest import (
     ChatRoomFactory,
     ChatMessageFactory,
     UserFactory,
-    AdminUserFactory,
 )
-from .conftest import _jwt_client
 
 pytestmark = pytest.mark.django_db
 
@@ -135,8 +121,6 @@ class TestRoomMessages:
 
     def test_messages_ordered_oldest_first(self, customer_client, customer, db):
         room = ChatRoomFactory(customer=customer)
-        m1 = ChatMessageFactory(room=room, sender=customer, content="first")
-        m2 = ChatMessageFactory(room=room, sender=customer, content="second")
         res = customer_client.get(messages_url(room.pk))
         items = res.data.get("results", res.data)
         assert items[0]["content"] == "first"

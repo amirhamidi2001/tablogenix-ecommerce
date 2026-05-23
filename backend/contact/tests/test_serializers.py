@@ -3,7 +3,6 @@ from django.test import TestCase
 from contact.models import ContactMessage
 from contact.serializers import ContactMessageSerializer
 
-
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
 VALID_PAYLOAD = {

@@ -1,10 +1,9 @@
 from django.core.exceptions import ValidationError
-from django.db import DataError, IntegrityError
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
 from contact.models import ContactMessage
-
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -109,7 +108,6 @@ class ContactMessageConstraintTests(TestCase):
         msg.full_clean()  # should not raise
 
     def test_name_exceeds_max_length_raises(self):
-        msg = make_message.__wrapped__ if hasattr(make_message, "__wrapped__") else None
         obj = ContactMessage(
             name="a" * 151,
             email="x@x.com",

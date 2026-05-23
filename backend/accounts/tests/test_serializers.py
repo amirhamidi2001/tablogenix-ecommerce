@@ -1,8 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
-from rest_framework.exceptions import ValidationError
 
-from accounts.models import Profile
 from accounts.serializers import (
     ChangePasswordSerializer,
     PasswordResetConfirmSerializer,

@@ -1,7 +1,6 @@
 import random
 from datetime import timedelta
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from django.contrib.auth import get_user_model
 from faker import Faker
 from blog.models import Category, Post, Comment

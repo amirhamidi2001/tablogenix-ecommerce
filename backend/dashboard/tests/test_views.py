@@ -1,6 +1,5 @@
 import pytest
 from decimal import Decimal
-from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 
 # ── URL constants ─────────────────────────────────────────────────────────────
@@ -79,7 +78,6 @@ class TestDashboardProfileView:
         from rest_framework.test import APIClient
 
         user_a = make_user(email="a@example.com")
-        user_b = make_user(email="b@example.com")
         client = APIClient()
         refresh = RefreshToken.for_user(user_a)
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {str(refresh.access_token)}")
@@ -158,8 +156,6 @@ class TestAddressViewSet:
     def test_list_returns_own_addresses_only(
         self, customer_client, customer, make_user
     ):
-        from rest_framework_simplejwt.tokens import RefreshToken
-        from rest_framework.test import APIClient
         from dashboard.models import Address
 
         # Create address belonging to another user
@@ -203,7 +199,6 @@ class TestAddressViewSet:
 
     def test_setting_default_unsets_previous(self, customer_client):
         r1 = customer_client.post(ADDRESSES_URL, _addr_payload(is_default=True))
-        r2 = customer_client.post(ADDRESSES_URL, _addr_payload(is_default=True))
         # Patch first back to default to re-trigger the logic
         res = customer_client.patch(addr_detail(r1.data["id"]), {"is_default": True})
         assert res.status_code == status.HTTP_200_OK

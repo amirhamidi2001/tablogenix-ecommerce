@@ -10,7 +10,6 @@ from .serializers import (
     CreateChatRoomSerializer,
 )
 
-
 # ─── Permissions ─────────────────────────────────────────────────────────────
 
 

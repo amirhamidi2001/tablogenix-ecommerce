@@ -28,17 +28,13 @@ router.register(
 router.register(
     r"admin/blog/categories",
     views.AdminBlogCategoryViewSet,
-    basename="admin-blog-category"
+    basename="admin-blog-category",
 )
 router.register(
-    r"admin/blog/posts",
-    views.AdminBlogPostViewSet,
-    basename="admin-blog-post"
+    r"admin/blog/posts", views.AdminBlogPostViewSet, basename="admin-blog-post"
 )
 router.register(
-    r"admin/blog/comments",
-    views.AdminBlogCommentViewSet,
-    basename="admin-blog-comment"
+    r"admin/blog/comments", views.AdminBlogCommentViewSet, basename="admin-blog-comment"
 )
 
 urlpatterns = [

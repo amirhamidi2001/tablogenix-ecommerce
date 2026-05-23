@@ -6,12 +6,9 @@ from blog.models import Category, Comment, Post
 from blog.tests.conftest import (
     CategoryFactory,
     CommentFactory,
-    DraftPostFactory,
     PostFactory,
     ReplyFactory,
-    UserFactory,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Category
@@ -153,8 +150,6 @@ class TestPostModel:
     # ── Ordering ──────────────────────────────────────────────────────────────
 
     def test_default_ordering_is_newest_first(self):
-        p1 = PostFactory()
-        p2 = PostFactory()
         p3 = PostFactory()
         pks = list(Post.objects.values_list("pk", flat=True))
         # Newest (largest PK in sequential creation) should be first

@@ -1,9 +1,3 @@
-"""
-Usage:
-    python manage.py seed_shop
-    python manage.py seed_shop --clear   # wipe existing data first
-"""
-
 import random
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
@@ -16,7 +10,6 @@ from shop.models import (
     ProductColor,
     Review,
 )
-
 
 CATEGORIES = [
     {

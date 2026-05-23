@@ -12,7 +12,6 @@ from shop.tests.factories import (
     ReviewFactory,
 )
 
-
 # ─── HTTP clients ────────────────────────────────────────────────────────────
 
 

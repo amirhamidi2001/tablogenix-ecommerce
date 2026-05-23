@@ -31,7 +31,7 @@ from .filters import (
     AdminCommentFilter,
 )
 from .models import Address, Wishlist
-from .permissions import IsAdminOrSuperuser, IsOwnerOrAdmin
+from .permissions import IsAdminOrSuperuser
 from .serializers import (
     AddressSerializer,
     AdminBrandSerializer,

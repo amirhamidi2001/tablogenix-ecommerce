@@ -2,8 +2,7 @@ import django_filters
 from django.contrib.auth import get_user_model
 
 from order.models import Order
-from shop.models import Product, Review
-from contact.models import ContactMessage
+from shop.models import Product
 from blog.models import Category, Post, Comment
 
 User = get_user_model()

@@ -10,9 +10,7 @@ from blog.tests.conftest import (
     DraftPostFactory,
     PostFactory,
     ReplyFactory,
-    UserFactory,
 )
-
 
 # ─── URL helpers ─────────────────────────────────────────────────────────────
 
@@ -173,8 +171,6 @@ class TestPostListView:
     # ── Default ordering ──────────────────────────────────────────────────────
 
     def test_default_ordering_is_newest_first(self, client):
-        p1 = PostFactory()
-        p2 = PostFactory()
         p3 = PostFactory()
         response = client.get(url_posts())
         slugs = [p["slug"] for p in response.data["results"]]
@@ -253,7 +249,6 @@ class TestPostListView:
     def test_ordering_by_views_count_descending(self, client):
         low = PostFactory(views_count=5)
         high = PostFactory(views_count=100)
-        mid = PostFactory(views_count=50)
         response = client.get(url_posts() + "?ordering=-views_count")
         slugs = [p["slug"] for p in response.data["results"]]
         assert slugs[0] == high.slug
@@ -461,7 +456,6 @@ class TestRelatedPostsView:
         # Category exists but the post is the only one in it
         cat = CategoryFactory()
         post = PostFactory(category=cat)
-        other = PostFactory()  # different category
         response = client.get(url_related(post.slug))
         # Fallback fires; should return the other post
         slugs = [p["slug"] for p in response.data]

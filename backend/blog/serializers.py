@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Category, Post, Comment
 
-
 # ─── Category ─────────────────────────────────────────────────────────────────
 
 

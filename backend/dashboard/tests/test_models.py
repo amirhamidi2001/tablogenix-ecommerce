@@ -1,7 +1,6 @@
 import pytest
 from django.db import IntegrityError
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Address
 # ══════════════════════════════════════════════════════════════════════════════
@@ -75,7 +74,6 @@ class TestAddressModel:
     def test_ordering_default_first(self, customer):
         from dashboard.models import Address
 
-        plain = self._make_addr(customer, is_default=False)
         default = self._make_addr(customer, is_default=True)
         addrs = list(Address.objects.filter(user=customer))
         assert addrs[0].id == default.id
@@ -125,9 +123,7 @@ class TestWishlistModel:
     def test_ordering_newest_first(self, customer, make_product):
         from dashboard.models import Wishlist
 
-        p1 = make_product()
         p2 = make_product()
-        w1 = Wishlist.objects.create(user=customer, product=p1)
         w2 = Wishlist.objects.create(user=customer, product=p2)
         items = list(Wishlist.objects.filter(user=customer))
         # Newest (w2) should come first

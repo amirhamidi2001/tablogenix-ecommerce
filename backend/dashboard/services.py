@@ -1,19 +1,13 @@
-"""
-Business-logic layer for the Dashboard app.
-All heavy queryset aggregations live here — views stay thin.
-"""
-
 from decimal import Decimal
 from datetime import timedelta
 
-from django.db.models import Sum, Count, Avg, F, Q, DecimalField
+from django.db.models import Sum, Count, Avg, F, DecimalField
 from django.db.models.functions import TruncMonth, TruncDate, Coalesce
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from order.models import Order, OrderItem
 from shop.models import Product, Review
-from contact.models import ContactMessage
 
 User = get_user_model()
 

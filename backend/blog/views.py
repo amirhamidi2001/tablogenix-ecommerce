@@ -17,7 +17,6 @@ from .serializers import (
     PostListSerializer,
 )
 
-
 # ─── Categories ───────────────────────────────────────────────────────────────
 
 

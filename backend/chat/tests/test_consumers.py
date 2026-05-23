@@ -1,12 +1,10 @@
-import json
 import pytest
 from channels.testing import WebsocketCommunicator
-from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from chat.consumers import ChatConsumer
-from chat.models import ChatRoom, ChatMessage
+from chat.models import ChatMessage
 from .conftest import ChatRoomFactory, UserFactory, AdminUserFactory
 
 User = get_user_model()

@@ -1,18 +1,7 @@
-"""
-chat/tests/test_models.py
-
-Unit tests for ChatRoom and ChatMessage models:
-  - Field defaults
-  - Status transitions
-  - Ordering guarantees
-  - __str__ representations
-"""
-
 import pytest
 from .conftest import (
     ChatRoomFactory,
     ChatMessageFactory,
-    UserFactory,
     AdminUserFactory,
 )
 
@@ -61,8 +50,6 @@ class TestChatRoom:
         assert room.subject == ""
 
     def test_rooms_ordered_by_updated_at_desc(self, db, customer):
-        room1 = ChatRoomFactory(customer=customer)
-        room2 = ChatRoomFactory(customer=customer)
         from chat.models import ChatRoom
 
         rooms = list(ChatRoom.objects.all())
@@ -105,8 +92,6 @@ class TestChatMessage:
         assert "Hello" in str(msg) or customer.email in str(msg)
 
     def test_messages_ordered_by_created_at_asc(self, db, chat_room, customer):
-        m1 = ChatMessageFactory(room=chat_room, sender=customer)
-        m2 = ChatMessageFactory(room=chat_room, sender=customer)
         msgs = list(chat_room.messages.all())
         assert msgs[0].created_at <= msgs[1].created_at
 

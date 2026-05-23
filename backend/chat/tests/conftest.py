@@ -1,13 +1,3 @@
-"""
-Root conftest.py
-
-All factories and fixtures shared across every app's tests live here so
-individual test files stay focused on behaviour, not object construction.
-
-Install requirements:
-    pip install pytest pytest-django pytest-asyncio factory_boy faker channels[daphne] pytest-mock
-"""
-
 import pytest
 import factory
 from factory.django import DjangoModelFactory

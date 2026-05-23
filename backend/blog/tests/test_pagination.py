@@ -1,8 +1,6 @@
 import pytest
-from django.urls import reverse
 from rest_framework.test import APIClient
 
-from blog.models import Post
 from blog.tests.conftest import PostFactory
 
 
