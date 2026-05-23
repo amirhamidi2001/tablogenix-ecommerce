@@ -41,6 +41,11 @@ A full-stack e-commerce platform built for selling smart electrical panels, comb
 - Order status management, review moderation, and contact message inbox
 - User management with role and verification controls
 
+### 📝 A Built-In Blog
+- Full posts & categories — Each post has a title, cover image, author, excerpt, and category
+- Featured & related posts — A hero section highlights one featured post
+- Comments & engagement — Readers can leave comments with optional website links.
+
 ---
 
 ## 🏗️ Tech Stack
@@ -63,6 +68,7 @@ A full-stack e-commerce platform built for selling smart electrical panels, comb
 tablogenix-ecommerce/
 ├── backend/
 │   ├── accounts/       # Auth: registration, login, email confirmation, password reset
+│   ├── blog/           # Blog posts, categories, comments, related posts
 │   ├── cart/           # Session/user cart management
 │   ├── chat/           # WebSocket-powered support chat (Channels + Redis)
 │   ├── contact/        # Contact form messages
