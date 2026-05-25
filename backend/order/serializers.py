@@ -166,7 +166,11 @@ class OrderCreateSerializer(serializers.Serializer):
         )
 
         # ── Snapshot each cart item ────────────────────────────────────────
-        for cart_item in cart.items.select_related("product").all():
+        for cart_item in (
+            cart.items.select_related("product")
+            .prefetch_related("product__images")
+            .all()
+        ):
             product = cart_item.product
 
             # Build absolute image URL
@@ -175,6 +179,11 @@ class OrderCreateSerializer(serializers.Serializer):
             if first_img and first_img.image:
                 try:
                     image_url = request.build_absolute_uri(first_img.image.url)
+                except Exception:
+                    image_url = ""
+            elif product.thumbnail:
+                try:
+                    image_url = request.build_absolute_uri(product.thumbnail.url)
                 except Exception:
                     image_url = ""
 

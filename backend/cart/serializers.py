@@ -17,12 +17,20 @@ class CartItemProductSerializer(serializers.Serializer):
 
     def get_image(self, obj):
         request = self.context.get("request")
-        # Use first product image if available
+
+        # 1. Try the first gallery image
         first_image = obj.images.first()
         if first_image and first_image.image:
             if request:
                 return request.build_absolute_uri(first_image.image.url)
             return first_image.image.url
+
+        # 2. Fall back to the dedicated thumbnail field
+        if obj.thumbnail:
+            if request:
+                return request.build_absolute_uri(obj.thumbnail.url)
+            return obj.thumbnail.url
+
         return None
 
 
