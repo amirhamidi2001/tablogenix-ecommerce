@@ -24,6 +24,15 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from django.contrib.sitemaps.views import sitemap
+from blog.sitemaps import BlogSitemap
+from shop.sitemaps import ProductSitemap, CategorySitemap
+
+sitemaps = {
+    "blog": BlogSitemap,
+    "products": ProductSitemap,
+    "categories": CategorySitemap,
+}
 
 urlpatterns = [
     # Admin
@@ -36,9 +45,9 @@ urlpatterns = [
     path("api/orders/", include("order.urls")),
     path("api/dashboard/", include("dashboard.urls", namespace="dashboard")),
     path("api/chat/", include("chat.urls", namespace="chat")),
+    path("api/blog/", include("blog.urls", namespace="blog")),
     # OpenAPI / Docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/blog/", include("blog.urls", namespace="blog")),
     path(
         "api/schema/swagger/",
         SpectacularSwaggerView.as_view(url_name="schema"),
@@ -49,6 +58,7 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
+    path("sitemap.xml", sitemap, {"sitemaps": sitemaps}),
 ]
 
 if settings.DEBUG:
