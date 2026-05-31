@@ -15,6 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from decouple import config
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -34,9 +35,11 @@ sitemaps = {
     "categories": CategorySitemap,
 }
 
+ADMIN_URL = config("ADMIN_URL")
+
 urlpatterns = [
     # Admin
-    path("admin/", admin.site.urls),
+    path(ADMIN_URL, admin.site.urls),
     # Apps
     path("api/auth/", include("accounts.urls")),
     path("api/contact/", include("contact.urls")),
