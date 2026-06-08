@@ -35,7 +35,7 @@ sitemaps = {
     "categories": CategorySitemap,
 }
 
-ADMIN_URL = config("ADMIN_URL")
+ADMIN_URL = config("ADMIN_URL", default="admin/")
 
 urlpatterns = [
     # Admin
