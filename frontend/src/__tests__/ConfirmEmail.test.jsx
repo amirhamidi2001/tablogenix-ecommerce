@@ -5,9 +5,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import ConfirmEmail from '../pages/ConfirmEmail';
-import api, { parseErrors } from '../api';
+import api, { parseErrors } from '../services/api';
 
-vi.mock('../api', () => ({
+vi.mock('../services/api', () => ({
   default:     { post: vi.fn() },
   parseErrors: vi.fn(),
 }));

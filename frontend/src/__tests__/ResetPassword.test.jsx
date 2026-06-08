@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import ResetPassword from '../pages/ResetPassword';
-import api, { parseErrors } from '../api';
+import api, { parseErrors } from '../services/api';
 
 const mockNavigate = vi.fn();
 
@@ -18,7 +18,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('../api', () => ({
+vi.mock('../services/api', () => ({
   default:     { post: vi.fn() },
   parseErrors: vi.fn(),
 }));

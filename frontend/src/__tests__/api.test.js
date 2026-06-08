@@ -10,7 +10,7 @@ import api, {
   clearTokens,
   isAuthenticated,
   parseErrors,
-} from '../api';
+} from '../services/api';
 
 /*
   Install: npm install -D axios-mock-adapter
@@ -169,8 +169,8 @@ describe('response interceptor — auth endpoint guard', () => {
   });
 
   it('propagates non-401 errors from protected endpoints without refresh', async () => {
-    mock.onGet('/profile/').reply(500, { detail: 'Server error' });
-    await expect(api.get('/profile/')).rejects.toMatchObject({
+    mock.onGet('/auth/profile/').reply(500, { detail: 'Server error' });
+    await expect(api.get('/auth/profile/')).rejects.toMatchObject({
       response: { status: 500 },
     });
   });

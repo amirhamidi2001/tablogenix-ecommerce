@@ -29,7 +29,7 @@ import {
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
-import Contact from '../Contact';
+import Contact from '../pages/Contact';
 
 // ─── mock api module ──────────────────────────────────────────────────────────
 

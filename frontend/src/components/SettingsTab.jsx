@@ -358,8 +358,9 @@ const SettingsTab = () => {
           <form onSubmit={handleChangePassword} noValidate className="space-y-4">
             {pwFields.map(({ key, label, showKey, auto }) => (
               <div key={key} className="relative">
-                <label className="block text-sm font-medium mb-1">{label}</label>
+                <label htmlFor={key} className="block text-sm font-medium mb-1">{label}</label>
                 <input
+                  id={key}
                   type={showPw[showKey] ? 'text' : 'password'}
                   value={pwData[key]}
                   onChange={(e) => setPwData({ ...pwData, [key]: e.target.value })}

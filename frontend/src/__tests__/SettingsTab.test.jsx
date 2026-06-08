@@ -5,9 +5,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import SettingsTab from '../components/SettingsTab';
-import api, { parseErrors } from '../api';
+import api, { parseErrors } from '../services/api';
 
-vi.mock('../api', () => ({
+vi.mock('../services/api', () => ({
   default:     { get: vi.fn(), patch: vi.fn(), post: vi.fn() },
   parseErrors: vi.fn(),
 }));
@@ -92,7 +92,7 @@ describe('SettingsTab — personal information', () => {
     await waitFor(() => screen.getByDisplayValue('Jane'));
   });
 
-  it('PATCHes /profile/ with updated name and phone on save', async () => {
+  it('PATCHes /auth/profile/ with updated name and phone on save', async () => {
     const user = userEvent.setup();
     const firstNameInput = screen.getByDisplayValue('Jane');
     await user.clear(firstNameInput);
@@ -101,7 +101,7 @@ describe('SettingsTab — personal information', () => {
 
     await waitFor(() => {
       expect(api.patch).toHaveBeenCalledWith(
-        '/profile/',
+        '/auth/profile/',
         expect.objectContaining({ first_name: 'Janet' }),
       );
     });
@@ -170,7 +170,7 @@ describe('SettingsTab — email preferences (toggles)', () => {
 
     await waitFor(() => {
       expect(api.patch).toHaveBeenCalledWith(
-        '/profile/',
+        '/auth/profile/',
         expect.objectContaining({ promotions: true }),
       );
     });
@@ -201,14 +201,14 @@ describe('SettingsTab — change password', () => {
     await user.type(screen.getByLabelText('Confirm Password'), confirm);
   };
 
-  it('POSTs to /change-password/ with correct field names', async () => {
+  it('POSTs to /auth/change-password/ with correct field names', async () => {
     api.post.mockResolvedValue({ data: { detail: 'Password updated successfully.' } });
     const user = userEvent.setup();
     await fillPasswordForm(user, 'OldPass123!', 'NewPass456!', 'NewPass456!');
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith('/change-password/', {
+      expect(api.post).toHaveBeenCalledWith('/auth/change-password/', {
         current_password: 'OldPass123!',
         new_password:     'NewPass456!',
         confirm_password: 'NewPass456!',

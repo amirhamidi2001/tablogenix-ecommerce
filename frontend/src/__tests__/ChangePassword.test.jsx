@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import ChangePassword from '../pages/ChangePassword';
-import api, { parseErrors } from '../api';
+import api, { parseErrors } from '../services/api';
 
 const mockNavigate = vi.fn();
 
@@ -14,7 +14,7 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-vi.mock('../api', () => ({
+vi.mock('../services/api', () => ({
   default:     { post: vi.fn() },
   parseErrors: vi.fn(),
 }));
@@ -62,7 +62,7 @@ describe('ChangePassword', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('POSTs to /change-password/ with snake_case fields', async () => {
+  it('POSTs to /auth/change-password/ with snake_case fields', async () => {
     api.post.mockResolvedValue({ data: { detail: 'Password updated successfully.' } });
     const user = userEvent.setup();
     renderPage();
@@ -70,7 +70,7 @@ describe('ChangePassword', () => {
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
     await waitFor(() =>
-      expect(api.post).toHaveBeenCalledWith('/change-password/', {
+      expect(api.post).toHaveBeenCalledWith('/auth/change-password/', {
         current_password: 'OldPass123!',
         new_password:     'NewPass456!',
         confirm_password: 'NewPass456!',
