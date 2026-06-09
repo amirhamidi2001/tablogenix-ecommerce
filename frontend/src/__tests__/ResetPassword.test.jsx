@@ -14,12 +14,12 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useParams:   vi.fn(() => ({ uid: 'dGVzdA', token: 'valid-token-abc' })),
+    useParams: vi.fn(() => ({ uid: 'dGVzdA', token: 'valid-token-abc' })),
   };
 });
 
 vi.mock('../services/api', () => ({
-  default:     { post: vi.fn() },
+  default: { post: vi.fn() },
   parseErrors: vi.fn(),
 }));
 
@@ -27,8 +27,8 @@ const renderPage = () =>
   render(<MemoryRouter><ResetPassword /></MemoryRouter>);
 
 const fillForm = async (user, pw = 'NewPass123!', conf = 'NewPass123!') => {
-  await user.type(screen.getByPlaceholderText(/new password/i),     pw);
-  await user.type(screen.getByPlaceholderText(/confirm new/i), conf);
+  await user.type(screen.getByPlaceholderText(/^new password \(min\./i), pw);
+  await user.type(screen.getByPlaceholderText(/^confirm new password$/i), conf);
 };
 
 describe('ResetPassword — invalid link guard', () => {
@@ -41,11 +41,14 @@ describe('ResetPassword — invalid link guard', () => {
     expect(screen.queryByPlaceholderText(/new password/i)).not.toBeInTheDocument();
   });
 
+
   it('shows "Request new link" button on invalid link screen', async () => {
-    const { useParams } = await import('react-router-dom');
-    useParams.mockReturnValue({});
-    renderPage();
-    expect(screen.getByRole('button', { name: /request new link/i })).toBeInTheDocument();
+    const { useParams } = await import('react-router-dom'); //
+    useParams.mockReturnValue({}); //
+    renderPage(); //
+
+    // Change 'button' to 'link'
+    expect(screen.getByRole('link', { name: /request new link/i })).toBeInTheDocument();
   });
 });
 
@@ -57,8 +60,8 @@ describe('ResetPassword — reset form', () => {
 
   it('renders the new password fields when uid and token are present', () => {
     renderPage();
-    expect(screen.getByPlaceholderText(/new password/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/confirm new/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('New password (min. 8 characters)')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Confirm new password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /reset password/i })).toBeInTheDocument();
   });
 
@@ -91,9 +94,9 @@ describe('ResetPassword — reset form', () => {
 
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith('/auth/password-reset/confirm/', {
-        uid:              'dGVzdA',
-        token:            'valid-token',
-        new_password:     'NewPass123!',
+        uid: 'dGVzdA',
+        token: 'valid-token',
+        new_password: 'NewPass123!',
         confirm_password: 'NewPass123!',
       }),
     );

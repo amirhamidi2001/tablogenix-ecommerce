@@ -12,14 +12,15 @@ import api, {
   parseErrors,
 } from '../services/api';
 
-/*
-  Install: npm install -D axios-mock-adapter
-*/
+// Bind the primary mock adapter to your custom api instance
+const mock = new MockAdapter(api);
 
-const mock = new MockAdapter(axios);
+// Bind a secondary mock adapter to the global axios instance to capture refresh calls
+const globalMock = new MockAdapter(axios);
 
 afterEach(() => {
   mock.reset();
+  globalMock.reset();
   localStorage.clear();
 });
 
@@ -90,7 +91,7 @@ describe('parseErrors', () => {
     const err = {
       response: {
         data: {
-          email:    ['Already exists.'],
+          email: ['Already exists.'],
           password: ['Too short.'],
         },
       },
@@ -146,8 +147,6 @@ describe('request interceptor', () => {
 
 describe('response interceptor — auth endpoint guard', () => {
   it('does NOT attempt token refresh when /auth/login/ returns 401', async () => {
-    // If the guard were absent, the interceptor would call /auth/token/refresh/
-    // and then redirect. We verify the error is propagated as-is.
     mock.onPost('/auth/login/').reply(401, {
       detail: 'No active account found with the given credentials',
     });
@@ -156,8 +155,8 @@ describe('response interceptor — auth endpoint guard', () => {
       response: { status: 401 },
     });
 
-    // token/refresh should NOT have been called
-    expect(mock.history.post.some((r) => r.url?.includes('token/refresh'))).toBe(false);
+    // token/refresh should NOT have been called on global axios
+    expect(globalMock.history.post.some((r) => r.url?.includes('token/refresh'))).toBe(false);
   });
 
   it('does NOT attempt token refresh when /auth/register/ returns 400', async () => {
@@ -165,7 +164,7 @@ describe('response interceptor — auth endpoint guard', () => {
     await expect(api.post('/auth/register/', {})).rejects.toMatchObject({
       response: { status: 400 },
     });
-    expect(mock.history.post.some((r) => r.url?.includes('token/refresh'))).toBe(false);
+    expect(globalMock.history.post.some((r) => r.url?.includes('token/refresh'))).toBe(false);
   });
 
   it('propagates non-401 errors from protected endpoints without refresh', async () => {

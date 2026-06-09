@@ -8,7 +8,7 @@ import ConfirmEmail from '../pages/ConfirmEmail';
 import api, { parseErrors } from '../services/api';
 
 vi.mock('../services/api', () => ({
-  default:     { post: vi.fn() },
+  default: { post: vi.fn() },
   parseErrors: vi.fn(),
 }));
 
@@ -90,7 +90,7 @@ describe('ConfirmEmail — verification mode (key in URL)', () => {
   });
 
   it('shows a verifying spinner while the API call is in flight', () => {
-    api.post.mockReturnValue(new Promise(() => {}));   // never resolves
+    api.post.mockReturnValue(new Promise(() => { }));   // never resolves
     renderPage();
     expect(screen.getByText(/verifying your email/i)).toBeInTheDocument();
   });

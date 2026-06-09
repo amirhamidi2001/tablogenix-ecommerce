@@ -8,7 +8,7 @@ import ForgotPassword from '../pages/ForgotPassword';
 import api, { parseErrors } from '../services/api';
 
 vi.mock('../services/api', () => ({
-  default:     { post: vi.fn() },
+  default: { post: vi.fn() },
   parseErrors: vi.fn(),
 }));
 

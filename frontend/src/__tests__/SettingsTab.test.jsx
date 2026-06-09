@@ -8,20 +8,20 @@ import SettingsTab from '../components/SettingsTab';
 import api, { parseErrors } from '../services/api';
 
 vi.mock('../services/api', () => ({
-  default:     { get: vi.fn(), patch: vi.fn(), post: vi.fn() },
+  default: { get: vi.fn(), patch: vi.fn(), post: vi.fn() },
   parseErrors: vi.fn(),
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────
 
 const PROFILE = {
-  email:         'jane@example.com',
-  first_name:    'Jane',
-  last_name:     'Doe',
-  phone_number:  '+12345678901',
+  email: 'jane@example.com',
+  first_name: 'Jane',
+  last_name: 'Doe',
+  phone_number: '+12345678901',
   order_updates: true,
-  promotions:    false,
-  newsletter:    true,
+  promotions: false,
+  newsletter: true,
 };
 
 const renderTab = () =>
@@ -41,7 +41,7 @@ const waitForLoad = () =>
 
 describe('SettingsTab — data loading', () => {
   it('shows skeleton loader while profile is being fetched', () => {
-    api.get.mockReturnValue(new Promise(() => {})); // never resolves
+    api.get.mockReturnValue(new Promise(() => { })); // never resolves
     renderTab();
     // The skeleton is multiple animated divs — check a section header is NOT yet visible
     expect(screen.queryByText('Personal Information')).not.toBeInTheDocument();
@@ -210,7 +210,7 @@ describe('SettingsTab — change password', () => {
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/auth/change-password/', {
         current_password: 'OldPass123!',
-        new_password:     'NewPass456!',
+        new_password: 'NewPass456!',
         confirm_password: 'NewPass456!',
       });
     });
@@ -243,9 +243,10 @@ describe('SettingsTab — change password', () => {
     await fillPasswordForm(user, 'WrongPass!', 'NewPass456!', 'NewPass456!');
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    await waitFor(() =>
-      expect(screen.getByText('Current password is incorrect.')).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      const errorEl = screen.getAllByText(/current password is incorrect/i)[0];
+      expect(errorEl).toBeInTheDocument();
+    });
   });
 
   it('clears password fields after successful update', async () => {

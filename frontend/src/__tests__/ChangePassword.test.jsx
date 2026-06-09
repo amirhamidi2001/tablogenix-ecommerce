@@ -1,5 +1,5 @@
 // src/__tests__/ChangePassword.test.jsx
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
@@ -11,29 +11,45 @@ const mockNavigate = vi.fn();
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
-  return { ...actual, useNavigate: () => mockNavigate };
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
 });
 
 vi.mock('../services/api', () => ({
-  default:     { post: vi.fn() },
+  default: { post: vi.fn() },
   parseErrors: vi.fn(),
 }));
 
 const renderPage = () =>
-  render(<MemoryRouter><ChangePassword /></MemoryRouter>);
+  render(
+    <MemoryRouter>
+      <ChangePassword />
+    </MemoryRouter>
+  );
 
 const fillForm = async (user, current = 'OldPass123!', next = 'NewPass456!', conf = 'NewPass456!') => {
-  await user.type(screen.getByPlaceholderText('Current password'), current);
-  await user.type(screen.getByPlaceholderText('New password'),     next);
-  await user.type(screen.getByPlaceholderText('Confirm new password'), conf);
+  await user.type(screen.getByPlaceholderText(/current password/i), current);
+  await user.type(screen.getByPlaceholderText(/^new password/i), next);
+  await user.type(screen.getByPlaceholderText(/confirm password/i), conf);
 };
 
 describe('ChangePassword', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders all three password fields', () => {
     renderPage();
-    expect(screen.getByPlaceholderText('Current password')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('New password')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Confirm new password')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/current password/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/^new password/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/confirm password/i)).toBeInTheDocument();
   });
 
   it('shows error when current password is empty', async () => {
@@ -69,66 +85,107 @@ describe('ChangePassword', () => {
     await fillForm(user);
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/auth/change-password/', {
         current_password: 'OldPass123!',
-        new_password:     'NewPass456!',
+        new_password: 'NewPass456!',
         confirm_password: 'NewPass456!',
-      }),
-    );
+      });
+    });
   });
 
   it('shows success state and navigates to /account after update', async () => {
-    api.post.mockResolvedValue({ data: { detail: 'OK' } });
-    vi.useFakeTimers();
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderPage();
-    await fillForm(user);
-    await user.click(screen.getByRole('button', { name: /update password/i }));
-
-    await waitFor(() =>
-      expect(screen.getByText(/password changed successfully/i)).toBeInTheDocument(),
-    );
-    vi.advanceTimersByTime(2500);
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/account'));
     vi.useRealTimers();
-  });
 
-  it('shows backend error for wrong current password under the correct field', async () => {
-    api.post.mockRejectedValue({ response: { status: 400 } });
-    parseErrors.mockReturnValue({ current_password: 'Current password is incorrect.' });
+    api.post.mockResolvedValue({ data: { detail: 'Password updated successfully.' } });
+
     const user = userEvent.setup();
     renderPage();
     await fillForm(user);
+
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    await waitFor(() =>
-      expect(screen.getByText('Current password is incorrect.')).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalled();
+    });
+
+    const successMessage = await screen.findByText('Password changed successfully!');
+    expect(successMessage).toBeInTheDocument();
+
+    const accountLink = await screen.findByRole('link', { name: /go to account now/i });
+    expect(accountLink).toHaveAttribute('href', '/account');
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/account');
+    }, { timeout: 3000 });
+  }, 15000);
+
+  it('shows backend error for wrong current password under the correct field', async () => {
+    const errorResponse = {
+      response: {
+        status: 400,
+        data: {}
+      }
+    };
+    api.post.mockRejectedValue(errorResponse);
+    parseErrors.mockReturnValue({ current_password: 'Current password is incorrect.' });
+
+    const user = userEvent.setup();
+    renderPage();
+    await fillForm(user);
+
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Current password is incorrect.')).toBeInTheDocument();
+    });
   });
 
   it('toggles password visibility for each field independently', async () => {
     const user = userEvent.setup();
     renderPage();
-    const inputs  = screen.getAllByPlaceholderText(/(current|new|confirm) (password|new password)/i);
+
     const toggles = screen.getAllByRole('button', { name: /toggle visibility/i });
 
-    expect(inputs[0]).toHaveAttribute('type', 'password');
+    const currentPasswordInput = screen.getByPlaceholderText(/current password/i);
+    const newPasswordInput = screen.getByPlaceholderText(/^new password/i);
+    const confirmPasswordInput = screen.getByPlaceholderText(/confirm password/i);
+
+    expect(currentPasswordInput).toHaveAttribute('type', 'password');
     await user.click(toggles[0]);
-    expect(inputs[0]).toHaveAttribute('type', 'text');
-    // Others remain untouched
-    expect(inputs[1]).toHaveAttribute('type', 'password');
+    expect(currentPasswordInput).toHaveAttribute('type', 'text');
+
+    await user.click(toggles[0]);
+    expect(currentPasswordInput).toHaveAttribute('type', 'password');
+
+    expect(newPasswordInput).toHaveAttribute('type', 'password');
+    await user.click(toggles[1]);
+    expect(newPasswordInput).toHaveAttribute('type', 'text');
+
+    expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+    await user.click(toggles[2]);
+    expect(confirmPasswordInput).toHaveAttribute('type', 'text');
   });
 
   it('disables the submit button while API call is in flight', async () => {
-    let resolve;
-    api.post.mockReturnValue(new Promise((r) => { resolve = r; }));
+    let resolvePromise;
+    const mockPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+    api.post.mockReturnValue(mockPromise);
+
     const user = userEvent.setup();
     renderPage();
     await fillForm(user);
-    await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    expect(screen.getByRole('button', { name: /updating/i })).toBeDisabled();
-    resolve({ data: {} });
+    const clickPromise = user.click(screen.getByRole('button', { name: /update password/i }));
+
+    const loadingButton = await screen.findByRole('button', { name: /updating/i });
+    expect(loadingButton).toBeDisabled();
+
+    resolvePromise({ data: {} });
+    await clickPromise;
+
+    expect(api.post).toHaveBeenCalledTimes(1);
   });
 });

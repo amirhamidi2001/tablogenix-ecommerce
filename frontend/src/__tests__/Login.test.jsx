@@ -11,19 +11,30 @@ import api, { setTokens, parseErrors } from '../services/api';
 
 const mockNavigate = vi.fn();
 
+// Add mock functions for the auth methods
+const mockLogin = vi.fn();
+const mockHydrateUser = vi.fn();
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
-    ...actual,
-    useNavigate:    () => mockNavigate,
-    useSearchParams: () => [new URLSearchParams(), vi.fn()],
+    ...actual, // This brings back the real, working useSearchParams
+    useNavigate: () => mockNavigate,
   };
 });
 
+// Mock the context hook
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({
+    login: mockLogin,
+    hydrateUser: mockHydrateUser,
+  }),
+}));
+
 vi.mock('../services/api', () => ({
-  default:         { post: vi.fn() },
-  setTokens:       vi.fn(),
-  parseErrors:     vi.fn(),
+  default: { post: vi.fn() },
+  setTokens: vi.fn(),
+  parseErrors: vi.fn(),
   isAuthenticated: vi.fn(() => false),
 }));
 
@@ -43,18 +54,23 @@ const fillLoginForm = async (user, email = 'a@b.com', password = 'Pass123!') => 
 
 const fillRegisterForm = async (user, overrides = {}) => {
   const defaults = {
-    firstName:       'John',
-    lastName:        'Doe',
-    email:           'john@example.com',
-    password:        'Pass123!',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com',
+    password: 'Pass123!',
     confirmPassword: 'Pass123!',
   };
   const vals = { ...defaults, ...overrides };
-  await user.type(screen.getByPlaceholderText('First name'),        vals.firstName);
-  await user.type(screen.getByPlaceholderText('Last name'),         vals.lastName);
-  await user.type(screen.getByPlaceholderText('Email address'),     vals.email);
-  await user.type(screen.getByPlaceholderText('Create password'),   vals.password);
-  await user.type(screen.getByPlaceholderText('Confirm password'),  vals.confirmPassword);
+
+  // Use findBy to asynchronously wait for the register form transition to complete
+  const firstNameInput = await screen.findByPlaceholderText('First name');
+  await user.type(firstNameInput, vals.firstName);
+
+  // Once the first input is present, the rest are rendered, so getBy is perfectly fine here
+  await user.type(screen.getByPlaceholderText('Last name'), vals.lastName);
+  await user.type(screen.getByPlaceholderText('Email address'), vals.email);
+  await user.type(screen.getByPlaceholderText('Create password'), vals.password);
+  await user.type(screen.getByPlaceholderText('Confirm password'), vals.confirmPassword);
 };
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
@@ -70,28 +86,32 @@ describe('Login page — login form', () => {
 
   it('navigates to /account on successful login', async () => {
     const user = userEvent.setup();
-    api.post.mockResolvedValue({ data: { access: 'acc', refresh: 'ref' } });
+    // Resolve the context login method instead of api.post
+    mockLogin.mockResolvedValue({ id: 1, email: 'a@b.com' });
     renderLogin();
 
     await fillLoginForm(user);
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(setTokens).toHaveBeenCalledWith({ access: 'acc', refresh: 'ref' });
+      expect(mockLogin).toHaveBeenCalledWith({
+        email: 'a@b.com',
+        password: 'Pass123!',
+      });
       expect(mockNavigate).toHaveBeenCalledWith('/account');
     });
   });
 
-  it('calls POST /auth/login/ with correct payload', async () => {
+  it('calls the login context method with correct payload', async () => {
     const user = userEvent.setup();
-    api.post.mockResolvedValue({ data: { access: 'a', refresh: 'r' } });
+    mockLogin.mockResolvedValue({ id: 1, email: 'test@example.com' });
     renderLogin();
 
     await fillLoginForm(user, 'test@example.com', 'MyPass123!');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith('/auth/login/', {
+      expect(mockLogin).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'MyPass123!',
       });
@@ -100,15 +120,13 @@ describe('Login page — login form', () => {
 
   it('displays backend error banner on invalid credentials', async () => {
     const user = userEvent.setup();
-    api.post.mockRejectedValue({ response: { status: 401 } });
+    mockLogin.mockRejectedValue(new Error('Unauthorized'));
     parseErrors.mockReturnValue({
       detail: 'No active account found with the given credentials',
     });
     renderLogin();
-
     await fillLoginForm(user);
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-
     await waitFor(() => {
       expect(
         screen.getByText('No active account found with the given credentials'),
@@ -118,35 +136,32 @@ describe('Login page — login form', () => {
 
   it('shows fallback error message when detail field is absent', async () => {
     const user = userEvent.setup();
-    api.post.mockRejectedValue({ response: { status: 401 } });
+    mockLogin.mockRejectedValue(new Error('Unauthorized'));
     parseErrors.mockReturnValue({});
     renderLogin();
-
     await fillLoginForm(user);
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-
     await waitFor(() => {
       expect(screen.getByText('Invalid email or password.')).toBeInTheDocument();
     });
   });
 
   it('disables submit button while request is in flight', async () => {
-    const user    = userEvent.setup();
-    let resolvePost;
-    api.post.mockReturnValue(new Promise((res) => { resolvePost = res; }));
+    const user = userEvent.setup();
+    let resolveLogin;
+    mockLogin.mockReturnValue(new Promise((res) => { resolveLogin = res; }));
     renderLogin();
-
     await fillLoginForm(user);
     await user.click(screen.getByRole('button', { name: /sign in/i }));
-
-    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
-    resolvePost({ data: { access: 'a', refresh: 'r' } });
+    const loadingButton = await screen.findByRole('button', { name: /signing in/i });
+    expect(loadingButton).toBeDisabled();
+    resolveLogin({ id: 1, email: 'a@b.com' });
   });
 
   it('toggles password visibility', async () => {
     const user = userEvent.setup();
     renderLogin();
-    const input  = screen.getByPlaceholderText('Password');
+    const input = screen.getByPlaceholderText('Password');
     const toggle = screen.getAllByRole('button', { name: /toggle/i })[0];
 
     expect(input).toHaveAttribute('type', 'password');
@@ -160,7 +175,7 @@ describe('Login page — login form', () => {
     const user = userEvent.setup();
     renderLogin();
     await user.click(screen.getByRole('button', { name: /create account/i }));
-    expect(screen.getByText('Create Account')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create Account', level: 3 })).toBeInTheDocument();
   });
 });
 
@@ -180,6 +195,7 @@ describe('Login page — register form', () => {
     api.post.mockResolvedValue({ data: { access: 'a', refresh: 'r' } });
     renderLogin();
     await user.click(screen.getByRole('button', { name: /create account/i }));
+    expect(await screen.findByPlaceholderText('First name')).toBeInTheDocument();
 
     await fillRegisterForm(user);
     await user.click(screen.getByRole('checkbox'));   // terms
@@ -187,10 +203,10 @@ describe('Login page — register form', () => {
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/auth/register/', {
-        email:      'john@example.com',
+        email: 'john@example.com',
         first_name: 'John',
-        last_name:  'Doe',
-        password:   'Pass123!',
+        last_name: 'Doe',
+        password: 'Pass123!',
       });
     });
   });
