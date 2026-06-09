@@ -6,6 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 
 from .models import ChatMessage, ChatRoom
+from accounts.models import Profile
 
 logger = logging.getLogger(__name__)
 
@@ -164,8 +165,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _get_display_name(self) -> str:
-        full = f"{self.user.first_name} {self.user.last_name}".strip()
-        return full or self.user.email
+        """Return user's full name from profile, or email if unavailable."""
+        try:
+            full = (
+                f"{self.user.profile.first_name} {self.user.profile.last_name}".strip()
+            )
+            if full:
+                return full
+        except (Profile.DoesNotExist, AttributeError):
+            pass
+        return self.user.email
 
     @database_sync_to_async
     def _is_agent(self) -> bool:

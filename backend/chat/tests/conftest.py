@@ -1,5 +1,6 @@
 import pytest
 import factory
+from asgiref.sync import sync_to_async
 from factory.django import DjangoModelFactory
 from faker import Faker
 from django.contrib.auth import get_user_model
@@ -8,6 +9,27 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 fake = Faker()
 User = get_user_model()
+
+
+# ─── In-memory channel layer override ────────────────────────────────────────
+# Applied to the entire test session via autouse so no individual test needs
+# to remember it.
+
+IN_MEMORY_CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
+
+
+@pytest.fixture(autouse=True)
+def use_in_memory_channel_layer(settings):
+    """
+    FIX 2 (continued): swap RedisChannelLayer → InMemoryChannelLayer for all
+    tests. `settings` is the pytest-django fixture that applies Django setting
+    overrides for the duration of the test and rolls them back afterwards.
+    """
+    settings.CHANNEL_LAYERS = IN_MEMORY_CHANNEL_LAYERS
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -38,9 +60,6 @@ class SuperUserFactory(UserFactory):
     type = 3  # SUPERUSER
 
 
-# ── Chat factories ────────────────────────────────────────────────────────
-
-
 class ChatRoomFactory(DjangoModelFactory):
     class Meta:
         model = "chat.ChatRoom"
@@ -60,8 +79,20 @@ class ChatMessageFactory(DjangoModelFactory):
     message_type = "text"
 
 
+acreate_user = sync_to_async(UserFactory)
+acreate_admin = sync_to_async(AdminUserFactory)
+acreate_room = sync_to_async(ChatRoomFactory)
+acreate_message = sync_to_async(ChatMessageFactory)
+
+
+@sync_to_async
+def acreate_token(user) -> str:
+    """Return a signed JWT access-token string for *user* (async-safe)."""
+    return str(RefreshToken.for_user(user).access_token)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
-# Fixtures
+# Pytest fixtures
 # ═══════════════════════════════════════════════════════════════════════════
 
 

@@ -52,6 +52,9 @@ class TestChatRoom:
     def test_rooms_ordered_by_updated_at_desc(self, db, customer):
         from chat.models import ChatRoom
 
+        room1 = ChatRoomFactory(customer=customer)
+        room2 = ChatRoomFactory(customer=customer)
+        room2.save()  # auto_now will update updated_at
         rooms = list(ChatRoom.objects.all())
         # Most-recently updated should appear first
         assert rooms[0].updated_at >= rooms[1].updated_at
@@ -92,7 +95,14 @@ class TestChatMessage:
         assert "Hello" in str(msg) or customer.email in str(msg)
 
     def test_messages_ordered_by_created_at_asc(self, db, chat_room, customer):
+        msg1 = ChatMessageFactory(room=chat_room, sender=customer, content="First")
+        msg2 = ChatMessageFactory(room=chat_room, sender=customer, content="Second")
+        import time
+
+        time.sleep(0.01)
         msgs = list(chat_room.messages.all())
+        assert msgs[0] == msg1
+        assert msgs[1] == msg2
         assert msgs[0].created_at <= msgs[1].created_at
 
     def test_mark_message_as_read(self, db, chat_message):

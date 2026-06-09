@@ -121,8 +121,11 @@ class TestRoomMessages:
 
     def test_messages_ordered_oldest_first(self, customer_client, customer, db):
         room = ChatRoomFactory(customer=customer)
+        msg1 = ChatMessageFactory(room=room, sender=customer, content="first")
+        msg2 = ChatMessageFactory(room=room, sender=customer, content="second")
         res = customer_client.get(messages_url(room.pk))
         items = res.data.get("results", res.data)
+        assert len(items) == 2
         assert items[0]["content"] == "first"
         assert items[1]["content"] == "second"
 
