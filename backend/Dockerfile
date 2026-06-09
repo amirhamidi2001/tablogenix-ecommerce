@@ -48,7 +48,5 @@ ENV DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE} \
     DATABASE_HOST=${DATABASE_HOST} \
     DATABASE_PORT=${DATABASE_PORT}
 
-RUN python manage.py collectstatic --noinput
-
 EXPOSE 8000
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
