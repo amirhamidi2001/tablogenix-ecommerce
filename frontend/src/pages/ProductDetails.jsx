@@ -1,3 +1,4 @@
+// src/pages/ProductDetails.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getProductDetails, getRelatedProducts, createReview, parseErrors } from '../services/api';
@@ -20,9 +21,8 @@ const Stars = ({ rating, size = 'text-base' }) => {
       {[...Array(5)].map((_, i) => (
         <i
           key={i}
-          className={`bi ${
-            i < full ? 'bi-star-fill' : i === full && half ? 'bi-star-half' : 'bi-star'
-          }`}
+          className={`bi ${i < full ? 'bi-star-fill' : i === full && half ? 'bi-star-half' : 'bi-star'
+            }`}
         />
       ))}
     </div>
@@ -38,14 +38,12 @@ const Toast = ({ message, type, onClose }) => {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-white transition-all ${
-        type === 'success' ? 'bg-teal-600' : 'bg-red-500'
-      }`}
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-white transition-all ${type === 'success' ? 'bg-teal-600' : 'bg-red-500'
+        }`}
     >
       <i
-        className={`bi ${
-          type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'
-        } text-lg`}
+        className={`bi ${type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'
+          } text-lg`}
       />
       <span className="text-sm font-medium">{message}</span>
       <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100">
@@ -110,9 +108,8 @@ const StarPicker = ({ value, onChange, error }) => (
           type="button"
           aria-label={`${star} star${star > 1 ? 's' : ''}`}
           onClick={() => onChange(star)}
-          className={`text-3xl transition-transform hover:scale-110 focus:outline-none ${
-            star <= value ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-300'
-          }`}
+          className={`text-3xl transition-transform hover:scale-110 focus:outline-none ${star <= value ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-300'
+            }`}
         >
           <i className="bi bi-star-fill" />
         </button>
@@ -133,10 +130,10 @@ const StarPicker = ({ value, onChange, error }) => (
 const FORM_INITIAL = { name: '', rating: 0, headline: '', comment: '' };
 
 const AddReviewForm = ({ productSlug, onSuccess }) => {
-  const [form, setForm]           = useState(FORM_INITIAL);
+  const [form, setForm] = useState(FORM_INITIAL);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [submitting, setSubmitting]   = useState(false);
-  const [submitted, setSubmitted]     = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   // ── field change ───────────────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -158,8 +155,8 @@ const AddReviewForm = ({ productSlug, onSuccess }) => {
   // ── client-side validation ─────────────────────────────────────────────────
   const validate = () => {
     const errs = {};
-    if (!form.name.trim())    errs.name    = 'Your name is required.';
-    if (!form.rating)         errs.rating  = 'Please select a star rating.';
+    if (!form.name.trim()) errs.name = 'Your name is required.';
+    if (!form.rating) errs.rating = 'Please select a star rating.';
     if (!form.comment.trim()) errs.comment = 'A review comment is required.';
     return errs;
   };
@@ -179,10 +176,10 @@ const AddReviewForm = ({ productSlug, onSuccess }) => {
 
     try {
       const { data: newReview } = await createReview(productSlug, {
-        name:     form.name.trim(),
-        rating:   form.rating,
+        name: form.name.trim(),
+        rating: form.rating,
         headline: form.headline.trim(),
-        comment:  form.comment.trim(),
+        comment: form.comment.trim(),
       });
 
       setSubmitted(true);
@@ -239,11 +236,10 @@ const AddReviewForm = ({ productSlug, onSuccess }) => {
             onChange={handleChange}
             placeholder="e.g. Jane Smith"
             autoComplete="name"
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-teal-400 focus:border-teal-400 ${
-              fieldErrors.name
-                ? 'border-red-400 bg-red-50'
-                : 'border-gray-300 bg-white hover:border-gray-400'
-            }`}
+            className={`w-full border rounded-lg px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-teal-400 focus:border-teal-400 ${fieldErrors.name
+              ? 'border-red-400 bg-red-50'
+              : 'border-gray-300 bg-white hover:border-gray-400'
+              }`}
           />
           {fieldErrors.name && (
             <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
@@ -286,11 +282,10 @@ const AddReviewForm = ({ productSlug, onSuccess }) => {
             onChange={handleChange}
             rows={5}
             placeholder="What did you think about this product? Would you recommend it?"
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-teal-400 focus:border-teal-400 resize-none ${
-              fieldErrors.comment
-                ? 'border-red-400 bg-red-50'
-                : 'border-gray-300 bg-white hover:border-gray-400'
-            }`}
+            className={`w-full border rounded-lg px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-teal-400 focus:border-teal-400 resize-none ${fieldErrors.comment
+              ? 'border-red-400 bg-red-50'
+              : 'border-gray-300 bg-white hover:border-gray-400'
+              }`}
           />
           {fieldErrors.comment && (
             <p className="text-red-500 text-xs mt-1">{fieldErrors.comment}</p>
@@ -340,25 +335,25 @@ const ProductDetails = () => {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
-  const [product, setProduct]               = useState(null);
+  const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [loading, setLoading]               = useState(true);
-  const [error, setError]                   = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Gallery state
   const [selectedImage, setSelectedImage] = useState(null);
-  const [currentIndex, setCurrentIndex]   = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   // UI state
-  const [quantity, setQuantity]         = useState(1);
+  const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(null);
-  const [activeTab, setActiveTab]         = useState('overview');
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Action states
-  const [addingToCart, setAddingToCart]       = useState(false);
-  const [buyingNow, setBuyingNow]             = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
   const [wishlistToggling, setWishlistToggling] = useState(false);
-  const [toast, setToast]                     = useState(null);
+  const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success') => setToast({ message, type });
   const hideToast = useCallback(() => setToast(null), []);
@@ -420,7 +415,7 @@ const ProductDetails = () => {
   const handleReviewAdded = useCallback((newReview) => {
     setProduct((prev) => ({
       ...prev,
-      reviews:       [newReview, ...(prev.reviews || [])],
+      reviews: [newReview, ...(prev.reviews || [])],
       reviews_count: (prev.reviews_count || 0) + 1,
     }));
     showToast('Your review has been posted!', 'success');
@@ -476,7 +471,7 @@ const ProductDetails = () => {
   // Quantity handlers
   const maxQty = product.stock || 1;
   const increaseQty = () => { if (quantity < maxQty) setQuantity((q) => q + 1); };
-  const decreaseQty = () => { if (quantity > 1)      setQuantity((q) => q - 1); };
+  const decreaseQty = () => { if (quantity > 1) setQuantity((q) => q - 1); };
 
   // Cart handlers
   const handleAddToCart = async () => {
@@ -501,7 +496,7 @@ const ProductDetails = () => {
   const reviews = product.reviews || [];
   const ratingDist = [5, 4, 3, 2, 1].map((stars) => {
     const count = reviews.filter((r) => r.rating === stars).length;
-    const pct   = reviews.length ? Math.round((count / reviews.length) * 100) : 0;
+    const pct = reviews.length ? Math.round((count / reviews.length) * 100) : 0;
     return { stars, count, pct };
   });
 
@@ -514,7 +509,7 @@ const ProductDetails = () => {
       <div className="bg-gray-50 py-12 border-b">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 md:mb-0">Product Details</h1>
-          <nav className="text-sm">
+          <nav className="text-sm" aria-label="Breadcrumb">
             <ol className="flex gap-2">
               <li><Link to="/" className="text-teal-700 hover:underline">Home</Link></li>
               <li className="text-gray-500">/</li>
@@ -574,11 +569,10 @@ const ProductDetails = () => {
                     <button
                       key={idx}
                       onClick={() => handleThumbnail(img, idx)}
-                      className={`border-2 rounded-lg overflow-hidden transition ${
-                        selectedImage === img
-                          ? 'border-teal-600'
-                          : 'border-transparent hover:border-gray-300'
-                      }`}
+                      className={`border-2 rounded-lg overflow-hidden transition ${selectedImage === img
+                        ? 'border-teal-600'
+                        : 'border-transparent hover:border-gray-300'
+                        }`}
                     >
                       <img
                         src={img}
@@ -688,11 +682,10 @@ const ProductDetails = () => {
                       <button
                         key={color.id}
                         onClick={() => setSelectedColor(color)}
-                        className={`w-10 h-10 rounded-full border-2 transition ${
-                          selectedColor?.id === color.id
-                            ? 'border-teal-600 ring-2 ring-teal-300'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
+                        className={`w-10 h-10 rounded-full border-2 transition ${selectedColor?.id === color.id
+                          ? 'border-teal-600 ring-2 ring-teal-300'
+                          : 'border-gray-300 hover:border-gray-400'
+                          }`}
                         style={{ backgroundColor: color.hex_code }}
                         title={color.name}
                       >
@@ -772,11 +765,10 @@ const ProductDetails = () => {
                   <button
                     onClick={handleToggleWishlist}
                     disabled={wishlistToggling}
-                    className={`p-3 border rounded-lg transition flex items-center justify-center ${
-                      productInWishlist
-                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`p-3 border rounded-lg transition flex items-center justify-center ${productInWishlist
+                      ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                      : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                     title={productInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   >
                     {wishlistToggling ? (
@@ -835,19 +827,18 @@ const ProductDetails = () => {
             <div className="border-b border-gray-200 mb-8">
               <nav className="flex gap-0 overflow-x-auto">
                 {[
-                  { id: 'overview',       label: 'Overview' },
+                  { id: 'overview', label: 'Overview' },
                   { id: 'specifications', label: 'Specifications' },
-                  { id: 'technical',      label: 'Technical Details' },
-                  { id: 'reviews',        label: `Reviews (${product.reviews_count || 0})` },
+                  { id: 'technical', label: 'Technical Details' },
+                  { id: 'reviews', label: `Reviews (${product.reviews_count || 0})` },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${
-                      activeTab === tab.id
-                        ? 'border-teal-600 text-teal-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${activeTab === tab.id
+                      ? 'border-teal-600 text-teal-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -1055,9 +1046,9 @@ const ProductDetails = () => {
                               <Stars rating={review.rating} size="text-xs" />
                               <span>
                                 {new Date(review.created_at).toLocaleDateString('en-US', {
-                                  year:  'numeric',
+                                  year: 'numeric',
                                   month: 'long',
-                                  day:   'numeric',
+                                  day: 'numeric',
                                 })}
                               </span>
                             </div>
