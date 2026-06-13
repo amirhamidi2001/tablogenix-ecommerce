@@ -1,6 +1,6 @@
 # ⚡ Tablogenix — Smart Electrical Panel E-Commerce Platform
 
-A full-stack e-commerce platform built for selling smart electrical panels, combining a robust **Django REST API** backend with a snappy **React + Vite** frontend — all wired together and ready to ship via **Docker Compose**.
+A full-stack e-commerce platform built for selling smart electrical panels, combining a robust **Django REST API** backend with a snappy **React + Vite** frontend — all wired together and ready to ship via **Docker Compose** (development or production environments).
 
 > Browse products, manage orders, chat with support in real time, and run the entire store from a powerful admin dashboard.
 
@@ -44,7 +44,11 @@ A full-stack e-commerce platform built for selling smart electrical panels, comb
 ### 📝 A Built-In Blog
 - Full posts & categories — Each post has a title, cover image, author, excerpt, and category
 - Featured & related posts — A hero section highlights one featured post
-- Comments & engagement — Readers can leave comments with optional website links.
+- Comments & engagement — Readers can leave comments with optional website links
+
+### 🗺️ SEO & Discoverability
+- XML sitemaps for both the shop (`shop/sitemaps.py`) and blog (`blog/sitemaps.py`)
+- `robots.txt` and `ads.txt` shipped with the frontend build
 
 ---
 
@@ -58,36 +62,47 @@ A full-stack e-commerce platform built for selling smart electrical panels, comb
 | **Frontend** | React 18 · Vite · Tailwind CSS |
 | **Auth** | JWT (SimpleJWT) |
 | **Server (prod)** | Nginx (serves the built frontend) |
-| **Containerization** | Docker · Docker Compose |
+| **Testing (backend)** | pytest + pytest-django |
+| **Testing (frontend)** | Vitest + React Testing Library |
+| **Containerization** | Docker · Docker Compose (dev / prod profiles) |
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Structure (Simplified)
 
 ```
 tablogenix-ecommerce/
 ├── backend/
-│   ├── accounts/       # Auth: registration, login, email confirmation, password reset
-│   ├── blog/           # Blog posts, categories, comments, related posts
-│   ├── cart/           # Session/user cart management
-│   ├── chat/           # WebSocket-powered support chat (Channels + Redis)
-│   ├── contact/        # Contact form messages
-│   ├── dashboard/      # User & admin dashboard APIs (profile, orders, wishlist, analytics…)
-│   ├── order/          # Order creation and lifecycle
-│   ├── shop/           # Products, categories, brands, colors, reviews
-│   ├── core/           # Django settings, URL root, ASGI/WSGI config
+│   ├── accounts/           # Auth: registration, login, email confirmation, password reset
+│   ├── blog/               # Blog posts, categories, comments, related posts
+│   ├── cart/               # Session/user cart management
+│   ├── chat/               # WebSocket-powered support chat (Channels + Redis)
+│   ├── contact/            # Contact form messages
+│   ├── core/               # Django settings split into base/development/production
+│   ├── dashboard/          # User & admin dashboard APIs (profile, orders, wishlist, analytics…)
+│   ├── order/              # Order creation and lifecycle
+│   ├── shop/               # Products, categories, brands, colors, reviews
+│   ├── media/profiles/     # User uploaded avatars + default.webp
 │   ├── Dockerfile
+│   ├── manage.py
+│   ├── pytest.ini
 │   └── requirements.txt
 ├── frontend/
+│   ├── public/             # Static assets: robots.txt, ads.txt, favicon, images
 │   ├── src/
-│   │   ├── components/ # Reusable UI pieces (Header, Footer, ChatWidget, admin components…)
-│   │   ├── pages/      # Route-level pages (Home, ProductDetails, Cart, Checkout, Admin…)
-│   │   ├── context/    # AuthContext, CartContext, WishlistContext
-│   │   ├── hooks/      # useChatWebSocket
-│   │   └── services/   # Centralised Axios API layer
+│   │   ├── components/     # Reusable UI (Header, Footer, ChatWidget, admin components…)
+│   │   ├── pages/          # Route-level pages (Home, ProductDetails, Cart, Checkout, Admin…)
+│   │   ├── context/        # AuthContext, CartContext, WishlistContext
+│   │   ├── hooks/          # useChatWebSocket
+│   │   ├── services/       # Centralised Axios API layer
+│   │   └── __tests__/      # Vitest + React Testing Library (unit & component tests)
 │   ├── Dockerfile
-│   └── nginx.conf
-└── docker-compose.yml
+│   ├── nginx.conf
+│   ├── vitest.config.js
+│   └── package.json
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
+└── README.md
 ```
 
 ---
@@ -96,7 +111,7 @@ tablogenix-ecommerce/
 
 ### Prerequisites
 
-- [Docker](https://www.docker.com/) & Docker Compose installed on your machine — that's genuinely all you need.
+- [Docker](https://www.docker.com/) & Docker Compose installed on your machine — that's all.
 
 ### 1. Clone the repo
 
@@ -107,9 +122,11 @@ cd tablogenix-ecommerce
 
 ### 2. Configure environment variables
 
-Create a `.env` file at the project root (or populate the values directly in `docker-compose.yml` for local development). At minimum you'll want:
+Create a `.env` file at the project root
 
 ```env
+DJANGO_SETTINGS_MODULE=core.settings.development
+
 # Django
 SECRET_KEY=your-secret-key
 DEBUG=True
@@ -131,10 +148,23 @@ EMAIL_HOST_USER=you@example.com
 EMAIL_HOST_PASSWORD=your-email-password
 ```
 
-### 3. Fire everything up
+### 3. Choose your environment
+
+| Environment | Compose file                    | Use case                  |
+|-------------|---------------------------------|---------------------------|
+| Development | `docker-compose.dev.yml`        | Hot reload, debugging     |
+| Production  | `docker-compose.prod.yml`       | Optimised, static serving |
+
+For development:
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.dev.yml up --build
+```
+
+For production (requires additional SSL/reverse proxy setup):
+
+```bash
+docker compose -f docker-compose.prod.yml up --build
 ```
 
 Docker Compose will spin up four services:
@@ -144,11 +174,11 @@ Docker Compose will spin up four services:
 | `db` | PostgreSQL 15 | `5432` |
 | `redis` | Redis 7 (Channels layer) | `6379` |
 | `backend` | Django + Daphne (ASGI) | `8000` |
-| `frontend` | React app served by Nginx | `80` |
+| `frontend` | React app served by Nginx | `80` (dev) / `443` (prod) |
 
 ### 4. Run migrations & seed data
 
-In a separate terminal:
+In a separate terminal (while containers are running):
 
 ```bash
 # Apply database migrations
@@ -159,13 +189,16 @@ docker compose exec backend python manage.py createsuperuser
 
 # (Optional) Seed the shop with sample products, categories, and brands
 docker compose exec backend python manage.py seed_shop
+
+# (Optional) Seed the blog with sample posts and categories
+docker compose exec backend python manage.py seed_blog
 ```
 
 ### 5. Open the app
 
 | URL | Description |
 |---|---|
-| `http://localhost` | Storefront |
+| `http://localhost` | Storefront (development) |
 | `http://localhost/admin` | Django admin |
 | `http://localhost:8000/api/` | REST API root |
 
@@ -173,7 +206,7 @@ docker compose exec backend python manage.py seed_shop
 
 ## 🔌 API Overview
 
-The backend exposes a RESTful API under `/api/`. A quick summary of the main endpoint groups:
+The backend exposes a RESTful API under `/api/`. Main endpoint groups:
 
 | Prefix | Covers |
 |---|---|
@@ -187,36 +220,53 @@ The backend exposes a RESTful API under `/api/`. A quick summary of the main end
 | `/api/chat/` | Support chat rooms and message history |
 | `/api/contact/` | Contact form submissions |
 
-WebSocket connections for chat are handled at `ws://<host>/ws/chat/<room_id>/`.
+WebSocket connections for chat: `ws://<host>/ws/chat/<room_id>/`.
+
+---
+
+## 🧪 Testing
+
+### Backend tests (pytest)
+
+```bash
+# Run all backend tests
+docker compose exec backend pytest
+
+# Run tests for a specific app
+docker compose exec backend pytest shop
+```
+
+> The backend uses `pytest.ini` with pytest‑django, factory boy, and coverage support.
+
+### Frontend tests (Vitest)
+
+```bash
+# Run frontend tests inside the container
+docker compose exec frontend npx vitest run
+
+# Or run them locally (from the frontend folder)
+cd frontend
+npm install
+npx vitest run
+```
+
+Frontend tests are located in `src/__tests__/` and cover components, pages, and API integration.
 
 ---
 
 ## 🐳 Docker Services In Detail
 
-```yaml
-# Simplified view of docker-compose.yml
-services:
-  db:       postgres:15   # Persistent volume, health-checked
-  redis:    redis:7        # Channel layer for Django Channels
-  backend:  ./backend      # Daphne ASGI server on :8000
-  frontend: ./frontend     # Vite build → Nginx on :80, proxies /api & /ws to backend
-```
+**Development** (`docker-compose.dev.yml`) includes:
+- Hot reload for backend (Daphne auto‑restart)
+- Vite dev server proxied through Nginx (or directly exposed)
+- Volume mounts for live code sync
 
-The Nginx config in `frontend/nginx.conf` handles routing: static assets are served directly, and `/api/` + `/ws/` are proxied to the Django backend.
+**Production** (`docker-compose.prod.yml`) includes:
+- Pre‑built static files (via `npm run build`)
+- Nginx serving built frontend + proxying API/WebSocket
+- Daphne with more workers (via `-b 0.0.0.0 -p 8000`)
 
----
-
-## 🧪 Running Tests
-
-```bash
-# Run all backend tests
-docker compose exec backend python manage.py test
-
-# Run tests for a specific app
-docker compose exec backend python manage.py test shop
-```
-
-Each Django app contains a `tests.py` file ready to be expanded.
+Both files share the same underlying services but differ in `command`, volumes, and `environment`.
 
 ---
 
