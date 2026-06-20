@@ -6,6 +6,21 @@ import Toast, { useToast } from "../../components/admin/Toast";
 
 const fmt = (n) => `$${parseFloat(n || 0).toFixed(2)}`;
 
+// ── Standalone Field Component (Moved Outside to Prevent Focus Loss) ──────────
+const Field = ({ name, label, form, handleChange, errors, type = "text", textarea }) => (
+  <div className={textarea ? "col-span-2" : ""}>
+    <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+    {textarea ? (
+      <textarea name={name} value={form[name]} onChange={handleChange} rows={3}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 resize-none ${errors[name] ? "border-red-400" : "border-gray-200"}`} />
+    ) : (
+      <input type={type} name={name} value={form[name]} onChange={handleChange}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 ${errors[name] ? "border-red-400" : "border-gray-200"}`} />
+    )}
+    {errors[name] && <p className="text-red-500 text-xs mt-0.5">{errors[name]}</p>}
+  </div>
+);
+
 // ── Product form modal ────────────────────────────────────────────────────────
 const ProductModal = ({ product, categories, brands, onClose, onSaved }) => {
   const [form, setForm] = useState({
@@ -70,20 +85,6 @@ const ProductModal = ({ product, categories, brands, onClose, onSaved }) => {
     }
   };
 
-  const Field = ({ name, label, type = "text", textarea }) => (
-    <div className={textarea ? "col-span-2" : ""}>
-      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-      {textarea ? (
-        <textarea name={name} value={form[name]} onChange={handleChange} rows={3}
-          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 resize-none ${errors[name] ? "border-red-400" : "border-gray-200"}`} />
-      ) : (
-        <input type={type} name={name} value={form[name]} onChange={handleChange}
-          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 ${errors[name] ? "border-red-400" : "border-gray-200"}`} />
-      )}
-      {errors[name] && <p className="text-red-500 text-xs mt-0.5">{errors[name]}</p>}
-    </div>
-  );
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
@@ -95,7 +96,7 @@ const ProductModal = ({ product, categories, brands, onClose, onSaved }) => {
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Field name="name" label="Product Name" />
+              <Field name="name" label="Product Name" form={form} handleChange={handleChange} errors={errors} />
             </div>
             {/* Category */}
             <div>
@@ -116,11 +117,11 @@ const ProductModal = ({ product, categories, brands, onClose, onSaved }) => {
                 {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
-            <Field name="price" label="Price ($)" type="number" />
-            <Field name="original_price" label="Original Price ($)" type="number" />
-            <Field name="stock" label="Stock Quantity" type="number" />
-            <Field name="short_description" label="Short Description" textarea />
-            <Field name="description" label="Full Description" textarea />
+            <Field name="price" label="Price ($)" type="number" form={form} handleChange={handleChange} errors={errors} />
+            <Field name="original_price" label="Original Price ($)" type="number" form={form} handleChange={handleChange} errors={errors} />
+            <Field name="stock" label="Stock Quantity" type="number" form={form} handleChange={handleChange} errors={errors} />
+            <Field name="short_description" label="Short Description" textarea form={form} handleChange={handleChange} errors={errors} />
+            <Field name="description" label="Full Description" textarea form={form} handleChange={handleChange} errors={errors} />
 
             {/* Thumbnail */}
             <div className="col-span-2">
@@ -269,8 +270,8 @@ const AdminProducts = () => {
   const Btn = ({ icon, label, onClick, variant }) => (
     <button onClick={onClick} title={label}
       className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${variant === "danger" ? "border-red-200 text-red-600 hover:bg-red-50"
-          : variant === "primary" ? "bg-teal-600 text-white border-teal-600 hover:bg-teal-700"
-            : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+        : variant === "primary" ? "bg-teal-600 text-white border-teal-600 hover:bg-teal-700"
+          : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
       <i className={`bi ${icon}`}></i>
     </button>
   );
