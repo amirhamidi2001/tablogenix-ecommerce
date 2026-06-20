@@ -123,6 +123,9 @@ const byOwnText = (text) => (content, node) => {
   return nodeHasText && childrenDontHaveText;
 };
 
+// Enforce UTC timezone for predictable snapshot testing across environments
+process.env.TZ = 'UTC';
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('AdminChat', () => {
