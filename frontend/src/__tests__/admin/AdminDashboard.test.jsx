@@ -714,6 +714,14 @@ describe('AdminDashboard', () => {
 
   // ── 11. Snapshot ─────────────────────────────────────────────────────────
   describe('Snapshot', () => {
+    beforeEach(() => {
+      // Tell Vitest to run timers but support modern async microtasks
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-06-19'));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
     it('matches stable snapshot after data loads', async () => {
       const { asFragment } = render(<AdminDashboard />);
       await waitFor(() => screen.getByText('Recent Orders'));
