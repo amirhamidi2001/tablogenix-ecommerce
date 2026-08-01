@@ -1,22 +1,22 @@
 from django.db.models import Avg, Count
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Category, Brand, Color, Product
-from .serializers import (
-    CategorySerializer,
-    BrandSerializer,
-    ColorSerializer,
-    ProductListSerializer,
-    ProductDetailSerializer,
-    ReviewSerializer,
-    ReviewCreateSerializer,
-)
 from .filters import ProductFilter
+from .models import Brand, Category, Color, Product
 from .pagination import StandardResultsPagination
+from .serializers import (
+    BrandSerializer,
+    CategorySerializer,
+    ColorSerializer,
+    ProductDetailSerializer,
+    ProductListSerializer,
+    ReviewCreateSerializer,
+    ReviewSerializer,
+)
 
 
 # ─── Categories ────────────────────────────────────────────────────────────────

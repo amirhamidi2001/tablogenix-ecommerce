@@ -1,11 +1,10 @@
 from decimal import Decimal
 
+from cart.models import Cart, CartItem
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from cart.models import Cart, CartItem
 from shop.models import Category, Product
 
 User = get_user_model()

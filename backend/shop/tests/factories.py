@@ -1,14 +1,13 @@
 import factory
-from factory.django import DjangoModelFactory
 from django.utils.text import slugify
-
+from factory.django import DjangoModelFactory
 from shop.models import (
-    Category,
     Brand,
+    Category,
     Color,
     Product,
-    ProductImage,
     ProductColor,
+    ProductImage,
     Review,
 )
 

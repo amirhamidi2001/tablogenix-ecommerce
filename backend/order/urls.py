@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import OrderListCreateView, OrderDetailView
+
+from .views import OrderDetailView, OrderListCreateView
 
 app_name = "order"
 

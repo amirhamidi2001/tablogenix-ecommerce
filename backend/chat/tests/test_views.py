@@ -1,10 +1,7 @@
 import pytest
 from rest_framework import status
-from .conftest import (
-    ChatRoomFactory,
-    ChatMessageFactory,
-    UserFactory,
-)
+
+from .conftest import ChatMessageFactory, ChatRoomFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
 

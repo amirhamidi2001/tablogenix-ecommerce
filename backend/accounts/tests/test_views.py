@@ -1,11 +1,10 @@
 import pytest
+from accounts.tokens import password_reset_token
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
-
-from accounts.tokens import password_reset_token
 
 User = get_user_model()
 

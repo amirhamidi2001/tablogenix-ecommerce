@@ -1,14 +1,13 @@
 import pytest
 from django.test import RequestFactory
 from rest_framework.test import APIClient
-
 from shop.tests.factories import (
-    CategoryFactory,
     BrandFactory,
+    CategoryFactory,
     ColorFactory,
+    ProductColorFactory,
     ProductFactory,
     ProductImageFactory,
-    ProductColorFactory,
     ReviewFactory,
 )
 

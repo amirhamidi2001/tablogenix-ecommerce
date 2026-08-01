@@ -1,5 +1,6 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -175,8 +176,8 @@ class TestGetUserSummary:
         assert summary["total_spent"] == 100.0
 
     def test_wishlist_count(self, customer, make_product):
-        from dashboard.services import get_user_summary
         from dashboard.models import Wishlist
+        from dashboard.services import get_user_summary
 
         Wishlist.objects.create(user=customer, product=make_product())
         Wishlist.objects.create(user=customer, product=make_product())

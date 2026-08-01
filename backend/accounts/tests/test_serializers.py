@@ -1,6 +1,4 @@
 import pytest
-from django.contrib.auth import get_user_model
-
 from accounts.serializers import (
     ChangePasswordSerializer,
     PasswordResetConfirmSerializer,
@@ -9,6 +7,7 @@ from accounts.serializers import (
     RegisterSerializer,
 )
 from accounts.tokens import password_reset_token
+from django.contrib.auth import get_user_model
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 

@@ -1,9 +1,8 @@
+from contact.models import ContactMessage
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
-
-from contact.models import ContactMessage
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 

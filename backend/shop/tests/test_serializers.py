@@ -1,25 +1,25 @@
-import pytest
 from unittest.mock import MagicMock
-from django.test import RequestFactory
 
+import pytest
+from django.test import RequestFactory
 from shop.serializers import (
-    CategorySerializer,
-    CategoryMinimalSerializer,
     BrandSerializer,
+    CategoryMinimalSerializer,
+    CategorySerializer,
     ColorSerializer,
-    ProductImageSerializer,
     ProductColorSerializer,
-    ReviewSerializer,
-    ProductListSerializer,
     ProductDetailSerializer,
+    ProductImageSerializer,
+    ProductListSerializer,
+    ReviewSerializer,
 )
 from shop.tests.factories import (
-    CategoryFactory,
     BrandFactory,
+    CategoryFactory,
     ColorFactory,
+    ProductColorFactory,
     ProductFactory,
     ProductImageFactory,
-    ProductColorFactory,
     ReviewFactory,
 )
 

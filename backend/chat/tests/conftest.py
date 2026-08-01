@@ -1,9 +1,9 @@
-import pytest
 import factory
+import pytest
 from asgiref.sync import sync_to_async
+from django.contrib.auth import get_user_model
 from factory.django import DjangoModelFactory
 from faker import Faker
-from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 

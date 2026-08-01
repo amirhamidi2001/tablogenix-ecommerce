@@ -1,11 +1,10 @@
 import re
 
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-
 from rest_framework import serializers
 
 from .tokens import password_reset_token

@@ -1,11 +1,11 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from shop.models import Product
 
 from .models import Cart, CartItem
-from .serializers import CartSerializer, CartItemSerializer
-from shop.models import Product
+from .serializers import CartItemSerializer, CartSerializer
 
 
 def get_or_create_cart(user):

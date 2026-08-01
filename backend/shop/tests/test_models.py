@@ -1,13 +1,12 @@
 import pytest
 from django.utils.text import slugify
-
-from shop.models import Category, Brand, Color, Product, ProductColor, Review
+from shop.models import Brand, Category, Color, Product, ProductColor, Review
 from shop.tests.factories import (
-    CategoryFactory,
     BrandFactory,
+    CategoryFactory,
     ColorFactory,
-    ProductFactory,
     ProductColorFactory,
+    ProductFactory,
     ReviewFactory,
 )
 

@@ -1,7 +1,4 @@
 import pytest
-from django.db import IntegrityError
-from django.utils.text import slugify
-
 from blog.models import Category, Comment, Post
 from blog.tests.conftest import (
     CategoryFactory,
@@ -9,6 +6,8 @@ from blog.tests.conftest import (
     PostFactory,
     ReplyFactory,
 )
+from django.db import IntegrityError
+from django.utils.text import slugify
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Category

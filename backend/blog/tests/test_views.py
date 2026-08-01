@@ -1,8 +1,4 @@
 import pytest
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
-
 from blog.models import Comment, Post
 from blog.tests.conftest import (
     CategoryFactory,
@@ -11,6 +7,9 @@ from blog.tests.conftest import (
     PostFactory,
     ReplyFactory,
 )
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
 
 # ─── URL helpers ─────────────────────────────────────────────────────────────
 

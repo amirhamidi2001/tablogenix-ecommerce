@@ -1,7 +1,6 @@
 import pytest
-from rest_framework.test import APIClient
-
 from blog.tests.conftest import PostFactory
+from rest_framework.test import APIClient
 
 
 @pytest.fixture

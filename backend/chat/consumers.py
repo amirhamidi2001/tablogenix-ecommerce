@@ -1,12 +1,12 @@
 import json
 import logging
 
+from accounts.models import Profile
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 
 from .models import ChatMessage, ChatRoom
-from accounts.models import Profile
 
 logger = logging.getLogger(__name__)
 

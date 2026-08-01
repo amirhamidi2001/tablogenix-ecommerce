@@ -1,11 +1,10 @@
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
 
-from django.db.models import Sum, Count, Avg, F, DecimalField
-from django.db.models.functions import TruncMonth, TruncDate, Coalesce
-from django.utils import timezone
 from django.contrib.auth import get_user_model
-
+from django.db.models import Avg, Count, DecimalField, F, Sum
+from django.db.models.functions import Coalesce, TruncDate, TruncMonth
+from django.utils import timezone
 from order.models import Order, OrderItem
 from shop.models import Product, Review
 

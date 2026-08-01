@@ -1,11 +1,9 @@
 from django.db.models import Count, F, Q
 from django.shortcuts import get_object_or_404
-
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-
-from django_filters.rest_framework import DjangoFilterBackend
 
 from .filters import PostFilter
 from .models import Category, Post

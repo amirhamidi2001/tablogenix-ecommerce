@@ -7,8 +7,9 @@ Usage:
     DJANGO_SETTINGS_MODULE=core.settings.production
 """
 
-from .base import *  # noqa: F401, F403
 from decouple import config
+
+from .base import *  # noqa: F401, F403
 
 # ─── Core ─────────────────────────────────────────────────────────────────────
 DEBUG = False

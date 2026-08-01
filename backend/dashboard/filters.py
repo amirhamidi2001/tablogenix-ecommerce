@@ -1,9 +1,8 @@
 import django_filters
+from blog.models import Category, Comment, Post
 from django.contrib.auth import get_user_model
-
 from order.models import Order
 from shop.models import Product
-from blog.models import Category, Post, Comment
 
 User = get_user_model()
 

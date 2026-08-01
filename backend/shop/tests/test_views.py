@@ -1,15 +1,14 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-
 from shop.tests.factories import (
-    CategoryFactory,
     BrandFactory,
+    CategoryFactory,
     ColorFactory,
-    ProductFactory,
     ProductColorFactory,
-    ReviewFactory,
+    ProductFactory,
     ProductImageFactory,
+    ReviewFactory,
 )
 
 

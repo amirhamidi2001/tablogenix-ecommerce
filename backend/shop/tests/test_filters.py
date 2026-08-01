@@ -2,11 +2,11 @@ import pytest
 from shop.filters import ProductFilter
 from shop.models import Product
 from shop.tests.factories import (
-    CategoryFactory,
     BrandFactory,
+    CategoryFactory,
     ColorFactory,
-    ProductFactory,
     ProductColorFactory,
+    ProductFactory,
 )
 
 

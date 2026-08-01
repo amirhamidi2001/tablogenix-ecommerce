@@ -15,19 +15,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from blog.sitemaps import BlogSitemap
 from decouple import config
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
+from django.urls import include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
-    SpectacularSwaggerView,
     SpectacularRedocView,
+    SpectacularSwaggerView,
 )
-from django.contrib.sitemaps.views import sitemap
-from blog.sitemaps import BlogSitemap
-from shop.sitemaps import ProductSitemap, CategorySitemap
+from shop.sitemaps import CategorySitemap, ProductSitemap
 
 sitemaps = {
     "blog": BlogSitemap,

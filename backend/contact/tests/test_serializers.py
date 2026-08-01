@@ -1,7 +1,6 @@
-from django.test import TestCase
-
 from contact.models import ContactMessage
 from contact.serializers import ContactMessageSerializer
+from django.test import TestCase
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 

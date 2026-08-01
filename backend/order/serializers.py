@@ -1,5 +1,7 @@
 from decimal import Decimal
+
 from rest_framework import serializers
+
 from .models import Order, OrderItem
 
 TAX_RATE = Decimal("0.10")  # 10%

@@ -1,14 +1,13 @@
+from accounts.models import Profile
+from blog.models import Comment, Post
+from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Sum
-
-from rest_framework import serializers
-
-from accounts.models import Profile
-from contact.models import ContactMessage
 from order.models import Order, OrderItem
+from rest_framework import serializers
 from shop.models import Brand, Category, Product, Review
-from blog.models import Comment, Post
+
 from .models import Address, Wishlist
 
 User = get_user_model()

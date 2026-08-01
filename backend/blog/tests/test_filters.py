@@ -1,5 +1,4 @@
 import pytest
-
 from blog.filters import PostFilter
 from blog.models import Post
 from blog.tests.conftest import CategoryFactory, PostFactory

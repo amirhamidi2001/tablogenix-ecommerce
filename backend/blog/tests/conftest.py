@@ -1,9 +1,8 @@
 import factory
 import pytest
+from blog.models import Category, Comment, Post
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient, APIRequestFactory
-
-from blog.models import Category, Comment, Post
 
 User = get_user_model()
 

@@ -1,9 +1,6 @@
 import pytest
-from .conftest import (
-    ChatRoomFactory,
-    ChatMessageFactory,
-    AdminUserFactory,
-)
+
+from .conftest import AdminUserFactory, ChatMessageFactory, ChatRoomFactory
 
 pytestmark = pytest.mark.django_db
 

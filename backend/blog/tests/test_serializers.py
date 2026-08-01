@@ -1,7 +1,6 @@
-import pytest
 from unittest.mock import MagicMock
-from rest_framework.test import APIRequestFactory
 
+import pytest
 from blog.serializers import (
     CategorySerializer,
     CommentCreateSerializer,
@@ -16,6 +15,7 @@ from blog.tests.conftest import (
     PostFactory,
     ReplyFactory,
 )
+from rest_framework.test import APIRequestFactory
 
 request_factory = APIRequestFactory()
 

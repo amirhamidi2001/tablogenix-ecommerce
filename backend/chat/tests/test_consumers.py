@@ -3,15 +3,10 @@ import uuid
 import pytest
 from asgiref.sync import sync_to_async
 from channels.testing import WebsocketCommunicator
-
 from chat.consumers import ChatConsumer
 from chat.models import ChatMessage
-from .conftest import (
-    acreate_admin,
-    acreate_room,
-    acreate_token,
-    acreate_user,
-)
+
+from .conftest import acreate_admin, acreate_room, acreate_token, acreate_user
 
 pytestmark = pytest.mark.django_db(transaction=True)
 

@@ -1,5 +1,6 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 from rest_framework import status
 
 # ── URL constants ─────────────────────────────────────────────────────────────
@@ -74,8 +75,8 @@ class TestDashboardProfileView:
         assert anon_client.get(PROFILE_URL).status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_cannot_access_other_user_profile(self, make_user):
-        from rest_framework_simplejwt.tokens import RefreshToken
         from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
 
         user_a = make_user(email="a@example.com")
         client = APIClient()
@@ -182,9 +183,9 @@ class TestAddressViewSet:
         assert res.status_code == status.HTTP_204_NO_CONTENT
 
     def test_cannot_delete_another_users_address(self, make_user):
-        from rest_framework_simplejwt.tokens import RefreshToken
-        from rest_framework.test import APIClient
         from dashboard.models import Address
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
 
         user_a = make_user(email="ua@example.com")
         user_b = make_user(email="ub@example.com")
@@ -248,8 +249,8 @@ class TestWishlistViewSet:
         assert del_res.status_code == status.HTTP_204_NO_CONTENT
 
     def test_wishlist_isolated_per_user(self, customer_client, make_user, make_product):
-        from rest_framework_simplejwt.tokens import RefreshToken
         from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
 
         product = make_product()
         other = make_user(email="other2@example.com")

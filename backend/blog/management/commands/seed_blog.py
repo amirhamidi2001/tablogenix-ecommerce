@@ -1,9 +1,10 @@
 import random
 from datetime import timedelta
-from django.core.management.base import BaseCommand
+
+from blog.models import Category, Comment, Post
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from faker import Faker
-from blog.models import Category, Post, Comment
 
 User = get_user_model()
 fake = Faker()
